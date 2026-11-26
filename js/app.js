@@ -11,7 +11,7 @@
   (function setupPro() {
     var b = $('proBtn');
     if (CFG.PRO_URL) {
-      b.href = CFG.PRO_URL; b.textContent = 'Get Pro ($9 one-time)'; b.removeAttribute('aria-disabled');
+      b.href = CFG.PRO_URL; b.textContent = 'Get the Teacher plan ($5/month)'; b.removeAttribute('aria-disabled');
       b.rel = 'noopener'; $('proNote').textContent = '';
     } else {
       b.removeAttribute('href'); b.classList.add('disabled');
@@ -110,6 +110,21 @@
       else { document.execCommand('copy'); done(); }
     });
   });
+
+  // ---------- hand-off from the class binder (same tab, sessionStorage only) ----------
+  (function takeHandoff() {
+    var raw = null;
+    try { raw = sessionStorage.getItem('subready.handoff'); sessionStorage.removeItem('subready.handoff'); } catch (e) { return; }
+    if (!raw) return;
+    var h; try { h = JSON.parse(raw); } catch (e) { return; }
+    if (!h || typeof h !== 'object') return;
+    var map = { plan: 'plan', title: 'className', periods: 'periods', routines: 'routines', locations: 'locations', helpers: 'helpers', emergency: 'emergency' };
+    Object.keys(map).forEach(function (k) { if (typeof h[k] === 'string' && $(map[k])) $(map[k]).value = h[k]; });
+    if (typeof h.names === 'string' && h.names.trim()) $('names').value = h.names;
+    refreshPreview();
+    var note = $('handoffNote');
+    if (note) { note.hidden = false; }
+  })();
 
   // ---------- step 1: find gaps ----------
   $('findGaps').addEventListener('click', function () {

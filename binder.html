@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class binder (free early access) · Sub-Ready</title>
+<meta name="description" content="Save your class once, keep a no-prep emergency sub plan ready, and print a front-office pack. Saved only in your browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e8743b'/><path d='M18 34l9 9 19-21' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="binder-page">
+<a class="skip no-print" href="#binder">Skip to the binder</a>
+<header class="site no-print">
+  <div class="wrap bar">
+    <a class="brand" href="index.html"><span class="logo" aria-hidden="true">&#10003;</span> Sub-Ready</a>
+    <nav><a href="binder.html" aria-current="page">Class binder</a><a href="compare.html">Compare</a><a href="index.html#tool" class="btn small">One-day plan</a></nav>
+  </div>
+</header>
+
+<main id="binder" class="wrap">
+  <div class="no-print">
+    <p class="eyebrow">Class binder <span class="badge" id="accessLabel">Free early access</span></p>
+    <h1>Set up your class once. Every sick day after that is quick.</h1>
+    <p class="lede">Save your routines, seating notes, supplies and procedures for each period. Keep a no-prep emergency plan ready, and print a front-office pack any time.</p>
+    <div class="privacy-note">
+      <strong>Where this is saved:</strong> only in this browser on this device. Nothing is uploaded and there&rsquo;s no account.
+      To move it to another computer, use <em>Export</em> and <em>Import</em>. The exported file holds your notes and any student first names you typed, so keep it private.
+      Clearing your browser data deletes the binder unless you exported it.
+    </div>
+    <p class="hint" id="earlyNote">These features are free during early access. Later they&rsquo;ll be part of the Teacher plan ($5/month) and the Building plan ($49/month). Those plans aren&rsquo;t on sale yet, and nothing here asks for payment.</p>
+  </div>
+
+  <div id="gate" class="card no-print" hidden>
+    <h2>The class binder is part of the Teacher plan</h2>
+    <p id="gateText">The Teacher plan is coming soon.</p>
+    <a id="gateBtn" class="btn" aria-disabled="true">Coming soon</a>
+  </div>
+
+  <div id="app" class="no-print">
+    <div class="toolbar">
+      <span id="saveStatus" class="status-line" role="status">Not saved yet</span>
+      <button class="btn ghost small" id="exportBtn" type="button">Export (.json)</button>
+      <label class="btn ghost small filebtn">Import<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+      <button class="btn ghost small danger" id="clearBtn" type="button">Delete from this browser</button>
+    </div>
+    <p id="ioMsg" class="hint" role="status" hidden></p>
+
+    <section class="card">
+      <h2><span class="num">1</span>Whole room</h2>
+      <p class="hint">Things that are the same for every period.</p>
+      <div class="grid3">
+        <div><label for="f-teacher">Teacher name</label><input id="f-teacher" data-shared="teacher" placeholder="Ms. Rivera"></div>
+        <div><label for="f-room">Room</label><input id="f-room" data-shared="room" placeholder="214"></div>
+        <div><label for="f-school">School</label><input id="f-school" data-shared="school" placeholder="School name"></div>
+      </div>
+      <div class="grid2">
+        <div><label for="f-arrival">When the sub arrives</label><textarea id="f-arrival" data-shared="arrival" rows="3" placeholder="Sign in at the front office. Key is at the desk. This binder is in the top drawer."></textarea></div>
+        <div><label for="f-bathroom">Bathroom / hall pass</label><textarea id="f-bathroom" data-shared="bathroom" rows="3" placeholder="One at a time with the orange pass by the door. Not in the first or last 10 minutes."></textarea></div>
+        <div><label for="f-emergency">Emergency procedures</label><textarea id="f-emergency" data-shared="emergency" rows="3" placeholder="Fire: out the door, turn left, Door 6, line up at the fence. Red emergency folder hangs by the door."></textarea></div>
+        <div><label for="f-health">Health &amp; allergy notes</label><textarea id="f-health" data-shared="health" rows="3" placeholder="Allergy list is in the red folder. Call the nurse (ext 210) for anything medical."></textarea></div>
+        <div><label for="f-dismissal">Dismissal / end of day</label><textarea id="f-dismissal" data-shared="dismissal" rows="3" placeholder="Bus riders leave at 2:55 when called. Walkers at 3:00."></textarea></div>
+        <div><label for="f-leave">Before you leave</label><textarea id="f-leave" data-shared="leave" rows="3" placeholder="Stack collected work in the tray on my desk with a short note."></textarea></div>
+      </div>
+      <label for="f-students">Student first names used in these notes</label>
+      <textarea id="f-students" data-shared="students" rows="2" placeholder="Jaylen&#10;Maya L.&#10;Will R."></textarea>
+      <p class="hint">One per line. When you send a period to the one-day tool, these names are hidden before any AI step. The binder itself never leaves this browser.</p>
+      <h3>Contacts by role</h3>
+      <p class="hint">Roles and extensions, not personal phone numbers. Never write a password here.</p>
+      <div id="contacts"></div>
+      <button class="btn ghost small" id="addContact" type="button">+ Add contact</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">2</span>Periods &amp; sections</h2>
+      <p class="hint">Each period keeps its own routines, seating notes, helpers, supplies and an <strong>any-day plan</strong>: no-prep work a sub can run on any date.</p>
+      <div id="classes"></div>
+      <button class="btn ghost small" id="addClass" type="button">+ Add a period</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">3</span>Check what&rsquo;s missing</h2>
+      <p class="hint">Reads your binder the way a stranger would. Nothing is sent anywhere; this check runs on your device.</p>
+      <button class="btn" id="checkBtn" type="button">Check my binder</button>
+      <div id="readiness" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">4</span>Emergency plan</h2>
+      <p class="hint">One standing plan for surprise sick days, built from your binder and each period&rsquo;s any-day plan. Print it now and leave a copy with the office.</p>
+      <button class="btn" id="emergencyBtn" type="button">Build the emergency plan</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">5</span>Today&rsquo;s plan (several periods)</h2>
+      <p class="hint">Tick the periods the sub will cover. Type today&rsquo;s lesson for any period, or leave it blank to use that period&rsquo;s any-day plan.</p>
+      <label for="dayDate">Date</label><input id="dayDate" placeholder="e.g. Tuesday, December 2">
+      <div id="dayPeriods"></div>
+      <button class="btn" id="dayBtn" type="button">Build today&rsquo;s print pack</button>
+    </section>
+  </div>
+
+  <section id="packWrap" hidden>
+    <div class="toolbar no-print">
+      <strong id="packTitle">Print pack</strong>
+      <button class="btn" id="printBtn" type="button">Print</button>
+      <button class="btn ghost small" id="closePack" type="button">Close</button>
+    </div>
+    <div id="packWarn" class="warn no-print" hidden></div>
+    <div id="pack"></div>
+  </section>
+</main>
+
+<footer class="site-foot no-print">
+  <div class="wrap"><p>Sub-Ready runs in your browser. No accounts, no tracking, no uploads. Always review a plan before you print it.</p></div>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/binder-core.js"></script>
+<script src="js/binder.js"></script>
+</body>
+</html>
