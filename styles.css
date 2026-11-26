@@ -158,6 +158,23 @@ table.pk-sched,table.pk-contacts{border-collapse:collapse;width:100%;margin:6px 
   .contact-row{grid-template-columns:1fr}
   .pack .sheet{padding:18px}
 }
+.extra{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:12px 0}
+.extra legend{font-weight:600;padding:0 6px}
+.link-msg .ok{color:#1d6b3a}.link-msg .error{color:#a11}
+.day-writing{margin:6px 0}.day-writing summary{cursor:pointer;font-weight:600}
+.writing-card{margin-top:10px}
+.writing-activity{border:2px solid #222;border-radius:10px;padding:10px 12px}
+.wa-body{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.wa-steps{margin:0;padding-left:22px;flex:1 1 240px}
+.wa-link{flex-basis:100%;order:3;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem;margin:0}
+.wa-link a{color:inherit}
+.wa-qr{flex:0 0 auto}.wa-qr svg{width:1.4in;height:1.4in;display:block}
+.wa-privacy{font-size:.85rem;color:#555;margin-top:6px !important}
+.starter{font-size:1.1rem;font-style:italic}
+.story-steps{margin:0;padding-left:22px}.story-steps li{margin:3px 0}
+.story-page .turn{margin:10px 0}
+.story-page .turn-n{font-weight:600;font-size:.9rem}
+.story-page .lines{height:62px;background:repeating-linear-gradient(#fff,#fff 30px,#d9cfc3 31px)}
 @media print{
   body.binder-page{background:#fff}
   body.binder-page header.site,body.binder-page footer,body.binder-page .no-print{display:none !important}
@@ -168,4 +185,6 @@ table.pk-sched,table.pk-contacts{border-collapse:collapse;width:100%;margin:6px 
   .pk-row,.pk-sched tr,.pk-contacts tr{break-inside:avoid;page-break-inside:avoid}
   .pack .ph{border:1px dashed #a07a2a;background:#fff}
   .pack{font-size:12pt}
+  .writing-activity,.story-page .turn{break-inside:avoid;page-break-inside:avoid}
+  .wa-link a{text-decoration:none}
 }

@@ -1,8 +1,8 @@
 # Class binder test results
 
-Run: 2026-11-26T16:17:09.524Z (UTC)  
+Run: 2026-11-26T22:56:43.448Z (UTC)  
 Command: `node tests/run-binder-tests.js`  
-**85 passed, 0 failed** (85 checks)
+**147 passed, 0 failed** (147 checks)
 
 Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 
@@ -85,9 +85,71 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | hand-off | today’s lesson wins when typed | PASS |  |
 | hand-off | names to hide = listed names + helpers | PASS | Jaylen Noah Ava T. Maya L. Will R. Grace S. |
 | hand-off | unknown period -> null | PASS |  |
-| pages | no Rerum or Rerum product names in site files | PASS |  |
+| writing activity | shipped config: SCRIPTO_ACTIVITY is off | PASS |  |
+| writing activity | label is "Student writing activity (Scripto)" | PASS |  |
+| writing activity | valid session link accepted, ?ref=subready added | PASS |  |
+| writing activity | surrounding spaces and trailing slash tolerated | PASS |  |
+| writing activity | rejected: http | PASS | http://scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: www host | PASS | https://www.scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: look-alike host | PASS | https://scriptorerum.com.evil.example/school/s/h7Kq2xW9pL |
+| writing activity | rejected: prefix not at start | PASS | https://evil.example/?u=https://scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: /join link | PASS | https://scriptorerum.com/join/h7Kq2xW9pL |
+| writing activity | rejected: /try demo | PASS | https://scriptorerum.com/school/try |
+| writing activity | rejected: no token | PASS | https://scriptorerum.com/school/s/ |
+| writing activity | rejected: token too short | PASS | https://scriptorerum.com/school/s/abc |
+| writing activity | rejected: spaces | PASS | https://scriptorerum.com/school/s/ab cd ef gh |
+| writing activity | rejected: path tricks | PASS | https://scriptorerum.com/school/s/h7Kq2xW9pL/../../x |
+| writing activity | rejected: javascript: | PASS | javascript:alert(1)//https://scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: encoded junk | PASS | https://scriptorerum.com/school/s/%3Cscript%3E |
+| writing activity | empty link is just "not set", no error | PASS |  |
+| writing activity | query and fragment are dropped (only the token is kept) | PASS | https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready |
+| writing activity | token that spells a student name is refused | PASS |  |
+| writing activity | fields saved: export -> import keeps link, time slot and notes | PASS |  |
+| writing activity | fields saved: save -> reload keeps them | PASS |  |
+| writing activity | not part of the gap check (optional) | PASS |  |
+| writing activity | flag off: saved link never prints | PASS |  |
+| writing activity | flag on: print block appears once, on that period’s sheet | PASS |  |
+| writing activity | print block: title | PASS |  |
+| writing activity | print block: the three numbered steps from spec 4.3 | PASS | ["Open this link on the teacher computer.","Press Start.","Put the code on the board. Students go to scriptorerum.com/jo |
+| writing activity | print block: link as text | PASS |  |
+| writing activity | print block: opens in a new tab with rel=noopener | PASS |  |
+| writing activity | print block: QR code drawn locally as inline SVG | PASS |  |
+| writing activity | print block: QR encodes exactly the cleaned link (deterministic redraw matches) | PASS |  |
+| writing activity | print block: privacy line word for word | PASS |  |
+| writing activity | print block: time slot and notes for the sub | PASS |  |
+| writing activity | privacy: every link in the pack is exactly prefix + token + ?ref=subready | PASS | https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready |
+| writing activity | privacy: no student name, roster or binder text in any link | PASS |  |
+| writing activity | privacy: a name pasted into the link’s query is stripped | PASS |  |
+| writing activity | privacy: the only text handed to the QR/link builder is the cleaned link | PASS |  |
+| writing activity | day-plan field: today’s link prints for that period | PASS |  |
+| writing activity | day-plan field: saved binder link still prints for the other period | PASS |  |
+| writing activity | invalid link: left out of the print and reported before printing | PASS |  |
+| writing activity | notes and time slot are escaped | PASS |  |
+| writing activity | brand: never called a "game" | PASS |  |
+| writing activity | brand: no prices or upsells in the writing activity copy | PASS |  |
+| writing activity | card copy from spec 4.3, linking out to scriptorerum.com/school | PASS |  |
+| story activity | saved: export -> import keeps the story settings | PASS |  |
+| story activity | minutes per turn: junk cleared | PASS |  |
+| story activity | storyOn only accepts yes | PASS |  |
+| story activity | adds two sheets (sub instructions + story page) only for that period | PASS | 8 |
+| story activity | story sheets follow their period | PASS |  |
+| story activity | groups, timed turns and pass-the-page steps | PASS |  |
+| story activity | timing guide uses the minutes per turn | PASS |  |
+| story activity | blank starter uses a ready-made one | PASS |  |
+| story activity | teacher’s own starter printed (escaped) | PASS |  |
+| story activity | paper only: no devices, accounts, links or QR | PASS |  |
+| story activity | brand-free: no Scripto or other brand on the story sheets | PASS |  |
+| story activity | reminds students not to use classmates’ real names | PASS |  |
+| story activity | story page has 8 turn boxes | PASS |  |
+| story activity | off by default: base pack unchanged | PASS |  |
+| pages | no other Rerum brand names anywhere in site files | PASS |  |
+| pages | Scripto named only in the optional module and its wiring | PASS |  |
+| pages | landing, compare, one-day tool, core and pack code are Scripto-free | PASS |  |
 | pages | no analytics or tracking scripts | PASS |  |
 | pages | binder code makes no network calls | PASS |  |
+| pages | writing-session module and QR library make no network calls | PASS |  |
+| pages | no iframe or embed anywhere | PASS |  |
+| pages | QR library is the MIT one, license kept | PASS |  |
 | pages | compare page: 6 rows (Sub-Ready + 5 tools) | PASS | 6 |
 | pages | compare page: every other tool has a source link and as-of date | PASS |  |
 | pages | compare page: no repeated customer counts or testimonials | PASS |  |

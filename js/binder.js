@@ -5,6 +5,8 @@
   var CFG = window.SUB_READY_CONFIG || {};
   var $ = function (id) { return document.getElementById(id); };
   var esc = C.esc;
+  // Optional link-out writing session block. Off unless the config flag is on AND the module loaded.
+  var W = CFG.SCRIPTO_ACTIVITY === true && window.SubReadyScripto ? window.SubReadyScripto : null;
 
   // ---------- storage (falls back to memory if the browser blocks it) ----------
   var store, persistent = true;
@@ -31,7 +33,7 @@
   if (!B.load(store) && !binder.contacts.length) {
     binder.contacts = [{ role: 'Front office', contact: '' }, { role: 'Neighbor teacher', contact: '' }, { role: 'Nurse', contact: '' }];
   }
-  var dayState = { checked: {}, lessons: {} };
+  var dayState = { checked: {}, lessons: {}, writing: {} };
 
   function setStatus(t) { $('saveStatus').textContent = t; }
   var saveTimer = null;
@@ -83,6 +85,7 @@
         h += '<div><label for="' + k + '-' + esc(c.id) + '">' + esc(f[1]) + '</label><textarea rows="3" id="' + k + '-' + esc(c.id) + '" data-k="' + k + '" placeholder="' + esc(FIELD_UI[k][1]) + '">' + esc(c[k]) + '</textarea></div>';
       });
       h += '</div><label for="anyDay-' + esc(c.id) + '">Any-day plan (no-prep work for a surprise absence)</label><textarea rows="5" id="anyDay-' + esc(c.id) + '" data-k="anyDay" placeholder="' + esc(FIELD_UI.anyDay[1]) + '">' + esc(c.anyDay) + '</textarea>';
+      h += storyFieldsHTML(c) + (W ? writingFieldsHTML(c) : '');
       h += '<div class="row-actions"><button class="btn ghost small" type="button" data-dup="' + esc(c.id) + '">Duplicate</button>' +
         (binder.classes.length > 1 ? '<button class="btn ghost small danger" type="button" data-del="' + esc(c.id) + '">Remove period</button>' : '') + '</div></details>';
       return h;
@@ -90,12 +93,39 @@
     $('addClass').disabled = binder.classes.length >= B.MAX_CLASSES;
     renderDay();
   }
+  function storyFieldsHTML(c) {
+    var id = esc(c.id);
+    return '<fieldset class="extra story-fields"><legend>Paper story activity (optional)</legend>' +
+      '<label class="check"><input type="checkbox" id="storyOn-' + id + '" data-k="storyOn"' + (c.storyOn === 'yes' ? ' checked' : '') + '> Add the pass-the-page story activity (paper only: groups, timed turns, no devices or accounts)</label>' +
+      '<div class="grid2"><div><label for="storyPrompt-' + id + '">Story starter (optional)</label><input id="storyPrompt-' + id + '" data-k="storyPrompt" value="' + esc(c.storyPrompt) + '" placeholder="Leave blank for a ready-made starter"></div>' +
+      '<div><label for="storyMinutes-' + id + '">Minutes per turn</label><input id="storyMinutes-' + id + '" data-k="storyMinutes" inputmode="numeric" value="' + esc(c.storyMinutes) + '" placeholder="3"></div></div></fieldset>';
+  }
+  function linkMsg(link) {
+    var v = W.validateLink(link, { students: binder.students });
+    return v.ok ? '<span class="ok">Link looks right. The printed link and QR code will be ' + esc(v.url) + '</span>' : (v.empty ? '' : '<span class="error">' + esc(v.error) + '</span>');
+  }
+  function writingFieldsHTML(c) {
+    var id = esc(c.id), L = W.COPY;
+    return '<fieldset class="extra writing-fields"><legend>' + esc(L.label) + ' <span class="hint">optional</span></legend>' +
+      '<div class="grid2"><div><label for="writingLink-' + id + '">' + esc(L.linkLabel) + '</label><input id="writingLink-' + id + '" data-k="writingLink" value="' + esc(c.writingLink) + '" placeholder="' + esc(W.PREFIX) + '\u2026" autocomplete="off" spellcheck="false"><p class="hint link-msg" data-link-msg>' + linkMsg(c.writingLink) + '</p></div>' +
+      '<div><label for="writingTime-' + id + '">' + esc(L.timeLabel) + '</label><input id="writingTime-' + id + '" data-k="writingTime" value="' + esc(c.writingTime) + '" placeholder="e.g. last 20 minutes, or 11:05\u201311:25"></div></div>' +
+      '<label for="writingNotes-' + id + '">' + esc(L.notesLabel) + '</label><textarea rows="2" id="writingNotes-' + id + '" data-k="writingNotes" placeholder="e.g. Groups are already set in the session.">' + esc(c.writingNotes) + '</textarea>' +
+      '<p class="hint">' + esc(L.privacy) + '</p></fieldset>';
+  }
+  function dayWritingHTML(c) {
+    var id = esc(c.id), L = W.COPY, w = dayState.writing[c.id] || {};
+    return '<details class="day-writing"><summary>' + esc(L.label) + ' for today <span class="hint">optional; leave blank to use the period\u2019s saved one</span></summary>' +
+      '<div class="grid2"><div><label for="dwLink-' + id + '">' + esc(L.linkLabel) + '</label><input id="dwLink-' + id + '" data-dw="link" data-dw-id="' + id + '" value="' + esc(w.link || '') + '" placeholder="' + esc(W.PREFIX) + '\u2026" autocomplete="off" spellcheck="false"><p class="hint link-msg" data-link-msg>' + linkMsg(w.link) + '</p></div>' +
+      '<div><label for="dwTime-' + id + '">' + esc(L.timeLabel) + '</label><input id="dwTime-' + id + '" data-dw="time" data-dw-id="' + id + '" value="' + esc(w.time || '') + '"></div></div>' +
+      '<label for="dwNotes-' + id + '">' + esc(L.notesLabel) + '</label><textarea rows="2" id="dwNotes-' + id + '" data-dw="notes" data-dw-id="' + id + '">' + esc(w.notes || '') + '</textarea></details>';
+  }
   function renderDay() {
     $('dayPeriods').innerHTML = binder.classes.map(function (c) {
       var on = dayState.checked[c.id] !== false;
       return '<div class="day-row" data-id="' + esc(c.id) + '"><label class="check"><input type="checkbox" data-day-check="' + esc(c.id) + '"' + (on ? ' checked' : '') + '> ' + esc(c.label) +
         ' <span class="hint">' + esc([c.start, c.end].filter(Boolean).join('\u2013')) + '</span></label>' +
         '<textarea rows="2" data-day-lesson="' + esc(c.id) + '" aria-label="Today\u2019s lesson for ' + esc(c.label) + '" placeholder="Today\u2019s lesson (leave blank to use the any-day plan)">' + esc(dayState.lessons[c.id] || '') + '</textarea>' +
+        (W ? dayWritingHTML(c) : '') +
         '<button class="btn ghost small" type="button" data-gap="' + esc(c.id) + '">Gap-check this period in the one-day tool</button></div>';
     }).join('');
   }
@@ -106,7 +136,15 @@
     var t = e.target;
     if (t.hasAttribute('data-shared')) { binder[t.getAttribute('data-shared')] = t.value; saveSoon(); return; }
     if (t.hasAttribute('data-c')) { var i = +t.closest('.contact-row').getAttribute('data-i'); binder.contacts[i][t.getAttribute('data-c')] = t.value; saveSoon(); return; }
+    if (t.hasAttribute('data-dw')) {
+      var did = t.getAttribute('data-dw-id');
+      (dayState.writing[did] = dayState.writing[did] || {})[t.getAttribute('data-dw')] = t.value;
+      if (t.getAttribute('data-dw') === 'link') t.parentNode.querySelector('[data-link-msg]').innerHTML = linkMsg(t.value);
+      return;
+    }
+    if (t.type === 'checkbox') return;
     if (t.hasAttribute('data-k')) {
+      if (t.getAttribute('data-k') === 'writingLink' && W) t.parentNode.querySelector('[data-link-msg]').innerHTML = linkMsg(t.value);
       var id = t.closest('.period-card').getAttribute('data-id');
       var c = binder.classes.filter(function (x) { return x.id === id; })[0];
       if (c) { c[t.getAttribute('data-k')] = t.value; saveSoon(); }
@@ -122,6 +160,10 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.hasAttribute('data-day-check')) dayState.checked[t.getAttribute('data-day-check')] = t.checked;
+    if (t.getAttribute('data-k') === 'storyOn') {
+      var c = binder.classes.filter(function (x) { return x.id === t.closest('.period-card').getAttribute('data-id'); })[0];
+      if (c) { c.storyOn = t.checked ? 'yes' : ''; saveSoon(); }
+    }
   });
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button'); if (!t) return;
@@ -158,21 +200,22 @@
 
   // ---------- packs ----------
   function showPack(model) {
-    $('pack').innerHTML = B.renderPackHTML(model);
+    $('pack').innerHTML = B.renderPackHTML(model, { writingModule: W });
     $('packTitle').textContent = model.mode === 'emergency' ? 'Emergency plan \u2014 print pack' : 'Today\u2019s print pack';
-    var miss = model.missing.length;
-    $('packWarn').hidden = !miss;
-    $('packWarn').innerHTML = miss ? '<strong>Before you print:</strong> ' + miss + ' item' + (miss === 1 ? ' is' : 's are') + ' not filled in, so ' + (miss === 1 ? 'it prints' : 'they print') + ' as \u201cNot provided.\u201d Use <em>Check my binder</em> to see which.' : '';
+    var miss = model.missing.length, werr = model.writingErrors || [];
+    $('packWarn').hidden = !miss && !werr.length;
+    $('packWarn').innerHTML = (miss ? '<strong>Before you print:</strong> ' + miss + ' item' + (miss === 1 ? ' is' : 's are') + ' not filled in, so ' + (miss === 1 ? 'it prints' : 'they print') + ' as \u201cNot provided.\u201d Use <em>Check my binder</em> to see which.' : '') +
+      (werr.length ? '<p class="writing-error"><strong>Writing session link left out:</strong> ' + werr.map(esc).join(' \u00b7 ') + '</p>' : '');
     $('packWrap').hidden = false;
     document.body.classList.add('has-pack');
     $('packWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  $('emergencyBtn').addEventListener('click', function () { saveNow(); showPack(B.buildPack(binder, { mode: 'emergency' })); });
+  $('emergencyBtn').addEventListener('click', function () { saveNow(); showPack(B.buildPack(binder, { mode: 'emergency', writing: W ? { module: W } : null })); });
   $('dayBtn').addEventListener('click', function () {
     saveNow();
     var ids = binder.classes.filter(function (c) { return dayState.checked[c.id] !== false; }).map(function (c) { return c.id; });
     if (!ids.length) { alert('Tick at least one period.'); return; }
-    showPack(B.buildPack(binder, { mode: 'day', date: $('dayDate').value, periods: ids, lessons: dayState.lessons }));
+    showPack(B.buildPack(binder, { mode: 'day', date: $('dayDate').value, periods: ids, lessons: dayState.lessons, writing: W ? { module: W, today: dayState.writing } : null }));
   });
   $('printBtn').addEventListener('click', function () { window.print(); });
   $('closePack').addEventListener('click', function () { $('packWrap').hidden = true; document.body.classList.remove('has-pack'); });
@@ -203,7 +246,7 @@
       try {
         var nb = B.importJSON(r.result);
         if (!confirm('Replace the binder in this browser with the one from ' + f.name + '?')) return;
-        binder = nb; dayState = { checked: {}, lessons: {} }; saveNow(); renderAll();
+        binder = nb; dayState = { checked: {}, lessons: {}, writing: {} }; saveNow(); renderAll();
         msg('Imported ' + binder.classes.length + ' period' + (binder.classes.length === 1 ? '' : 's') + ' from ' + f.name + '.');
       } catch (err) { msg(err.message, true); }
       finally { e.target.value = ''; }
@@ -213,10 +256,18 @@
   });
   $('clearBtn').addEventListener('click', function () {
     if (!confirm('Delete the binder from this browser? Export first if you want to keep a copy.')) return;
-    B.clear(store); binder = B.emptyBinder(); dayState = { checked: {}, lessons: {} }; renderAll(); setStatus('Deleted from this browser');
+    B.clear(store); binder = B.emptyBinder(); dayState = { checked: {}, lessons: {}, writing: {} }; renderAll(); setStatus('Deleted from this browser');
     $('packWrap').hidden = true;
   });
 
+  // Optional writing-session card and privacy line (only with the flag on). Link out only: new tab, no embed.
+  if (W) {
+    var card = document.createElement('div');
+    card.className = 'privacy-note writing-card'; card.id = 'writingCard';
+    card.innerHTML = '<strong>' + esc(W.COPY.label) + '.</strong> ' + esc(W.COPY.card).replace('scriptorerum.com/school', '<a href="' + esc(W.COPY.cardUrl) + '?ref=subready" target="_blank" rel="noopener noreferrer">scriptorerum.com/school</a>') +
+      '<br><span class="hint">' + esc(W.COPY.privacy) + '</span>';
+    var pn = document.querySelector('.privacy-note'); pn.parentNode.insertBefore(card, pn.nextSibling);
+  }
   renderAll();
   if (B.load(store)) setStatus('Loaded from this browser');
   window.__subReadyBinder = { get binder() { return binder; }, access: acc, saveNow: saveNow, persistent: persistent };

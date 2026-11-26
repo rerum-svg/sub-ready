@@ -163,14 +163,119 @@ check(g, 'today\u2019s lesson wins when typed', /Lesson/.test(B.toToolHandoff(FI
 check(g, 'names to hide = listed names + helpers', ['Jaylen', 'Ava T.', 'Grace S.'].every(x => h.names.split('\n').includes(x)) && !/Reading|Seating/.test(h.names), h.names);
 check(g, 'unknown period -> null', B.toToolHandoff(FIX, 'nope') === null);
 
+
+// ---------- optional writing activity (Scripto), behind SCRIPTO_ACTIVITY ----------
+g = 'writing activity';
+const S = require('../js/scripto.js');
+const sbx2 = { window: {} }; vm.runInNewContext(fs.readFileSync(path.join(root, 'js/config.js'), 'utf8'), sbx2);
+check(g, 'shipped config: SCRIPTO_ACTIVITY is off', sbx2.window.SUB_READY_CONFIG.SCRIPTO_ACTIVITY === false);
+const TOK = 'h7Kq2xW9pL';
+const GOOD = 'https://scriptorerum.com/school/s/' + TOK;
+const WANT = GOOD + '?ref=subready';
+check(g, 'label is "Student writing activity (Scripto)"', S.COPY.label === 'Student writing activity (Scripto)');
+check(g, 'valid session link accepted, ?ref=subready added', S.validateLink(GOOD).ok && S.validateLink(GOOD).url === WANT);
+check(g, 'surrounding spaces and trailing slash tolerated', S.validateLink('  ' + GOOD + '/ ').url === WANT);
+[['http://scriptorerum.com/school/s/' + TOK, 'http'], ['https://www.scriptorerum.com/school/s/' + TOK, 'www host'], ['https://scriptorerum.com.evil.example/school/s/' + TOK, 'look-alike host'],
+ ['https://evil.example/?u=https://scriptorerum.com/school/s/' + TOK, 'prefix not at start'], ['https://scriptorerum.com/join/' + TOK, '/join link'], ['https://scriptorerum.com/school/try', '/try demo'],
+ ['https://scriptorerum.com/school/s/', 'no token'], ['https://scriptorerum.com/school/s/abc', 'token too short'], ['https://scriptorerum.com/school/s/ab cd ef gh', 'spaces'],
+ ['https://scriptorerum.com/school/s/' + TOK + '/../../x', 'path tricks'], ['javascript:alert(1)//https://scriptorerum.com/school/s/' + TOK, 'javascript:'], ['https://scriptorerum.com/school/s/%3Cscript%3E', 'encoded junk']
+].forEach(([u, why]) => check(g, 'rejected: ' + why, !S.validateLink(u).ok && S.validateLink(u).error, u));
+check(g, 'empty link is just "not set", no error', S.validateLink('').empty && !S.validateLink('').error);
+const withQ = S.validateLink(GOOD + '?student=Maya&room=214#Jaylen');
+check(g, 'query and fragment are dropped (only the token is kept)', withQ.ok && withQ.url === WANT, withQ.url);
+check(g, 'token that spells a student name is refused', !S.validateLink('https://scriptorerum.com/school/s/jaylen-p3-math', { students: FIX.students }).ok);
+
+const W1 = clone(FIX);
+Object.assign(W1.classes[0], { writingLink: GOOD + '?name=Maya%20L.', writingTime: 'Last 20 minutes', writingNotes: 'Groups are already set in the session.' });
+const wRe = B.importJSON(B.exportJSON(W1));
+check(g, 'fields saved: export -> import keeps link, time slot and notes', wRe.classes[0].writingLink === W1.classes[0].writingLink && wRe.classes[0].writingTime === 'Last 20 minutes' && /Groups/.test(wRe.classes[0].writingNotes));
+const wst = memStore(); B.save(wst, W1);
+check(g, 'fields saved: save -> reload keeps them', B.load(wst).classes[0].writingNotes === W1.classes[0].writingNotes);
+check(g, 'not part of the gap check (optional)', B.readiness(W1).length === 0 && !B.readiness(B.emptyBinder()).some(i => /writing|story/i.test(i.field)));
+
+const offHtml = B.renderPackHTML(B.buildPack(W1, { mode: 'emergency' }));
+check(g, 'flag off: saved link never prints', !/scripto|writing-activity|<svg/i.test(offHtml));
+const onModel = B.buildPack(W1, { mode: 'emergency', writing: { module: S } });
+const onHtml = B.renderPackHTML(onModel, { writingModule: S });
+const blocks = onHtml.match(/<div class="pk-row writing-activity"[\s\S]*?<p class="wa-privacy">[^<]*<\/p><\/div>/g) || [];
+check(g, 'flag on: print block appears once, on that period\u2019s sheet', blocks.length === 1 && /sheet period[^]*?Period 3 - Math 7[^]*?writing-activity/.test(onHtml.split('sheet emergency')[0]) && !/writing-activity/.test(onHtml.split('Period 1 - Math 6</h2>')[1].split('</section>')[0]));
+const bl = blocks[0] || '';
+check(g, 'print block: title', /<h4>Student writing activity \(Scripto\)<\/h4>/.test(bl));
+const steps = (bl.match(/<li>([^<]*)<\/li>/g) || []).map(x => x.replace(/<\/?li>/g, ''));
+check(g, 'print block: the three numbered steps from spec 4.3', steps.length === 3 && steps[0] === 'Open this link on the teacher computer.' && steps[1] === 'Press Start.' && steps[2] === 'Put the code on the board. Students go to scriptorerum.com/join.', JSON.stringify(steps));
+check(g, 'print block: link as text', bl.indexOf('>' + WANT + '</a>') > -1);
+check(g, 'print block: opens in a new tab with rel=noopener', /<a href="[^"]+" target="_blank" rel="noopener[^"]*">/.test(bl));
+check(g, 'print block: QR code drawn locally as inline SVG', /<svg class="qr"[^>]*>[\s\S]*<path d="M/.test(bl) && !/<img|src=/.test(bl));
+check(g, 'print block: QR encodes exactly the cleaned link (deterministic redraw matches)', bl.indexOf(S.qrSVG(WANT)) > -1);
+check(g, 'print block: privacy line word for word', bl.indexOf('Sub-Ready itself still uploads nothing. If you add a Scripto writing activity, that part runs on scriptorerum.com under Scripto&#39;s School privacy terms.') > -1 || bl.indexOf('Sub-Ready itself still uploads nothing. If you add a Scripto writing activity, that part runs on scriptorerum.com under Scripto\u2019s School privacy terms.') > -1);
+check(g, 'print block: time slot and notes for the sub', /Time slot:<\/strong> Last 20 minutes/.test(bl) && /Notes for the sub:<\/strong> Groups are already set/.test(bl));
+
+// Privacy: nothing from the binder ever reaches the link or the QR code.
+const urls = (onHtml.match(/(?:href|data-url)="([^"]*scriptorerum[^"]*)"/g) || []).map(x => x.replace(/^[^"]*"|"$/g, '').replace(/&amp;/g, '&'));
+const secrets = C.parseNameList(FIX.students).concat(['Rivera', '214', 'Lincoln', 'Maya', 'Jaylen', 'Door 6', 'ext 210', 'EpiPen', 'Math']);
+check(g, 'privacy: every link in the pack is exactly prefix + token + ?ref=subready', urls.length === 2 && urls.every(u => u === WANT), urls.join(' '));
+check(g, 'privacy: no student name, roster or binder text in any link', urls.every(u => secrets.every(x => u.toLowerCase().indexOf(String(x).toLowerCase()) < 0)));
+check(g, 'privacy: a name pasted into the link\u2019s query is stripped', W1.classes[0].writingLink.indexOf('Maya') > -1 && urls.every(u => !/maya/i.test(u)));
+const fakeQR = []; const S2 = Object.assign({}, S, { renderBlock: (a, o) => { const v = S.validateLink(a.link, o); fakeQR.push(v.url); return S.renderBlock(a, o); } });
+B.renderPackHTML(B.buildPack(W1, { mode: 'day', periods: ['p3', 'p1', 'p5'], writing: { module: S2 } }), { writingModule: S2 });
+check(g, 'privacy: the only text handed to the QR/link builder is the cleaned link', fakeQR.length === 1 && fakeQR[0] === WANT);
+
+const dayW = B.buildPack(W1, { mode: 'day', periods: ['p3', 'p1'], writing: { module: S, today: { p1: { link: 'https://scriptorerum.com/school/s/TodayOnly42', time: '8:30', notes: 'Use the projector.' } } } });
+const dayWHtml = B.renderPackHTML(dayW, { writingModule: S });
+check(g, 'day-plan field: today\u2019s link prints for that period', /TodayOnly42\?ref=subready/.test(dayWHtml) && /Use the projector/.test(dayWHtml));
+check(g, 'day-plan field: saved binder link still prints for the other period', dayWHtml.indexOf(WANT) > -1);
+const badW = clone(W1); badW.classes[1].writingLink = 'https://example.com/school/s/abcdef123';
+const badM = B.buildPack(badW, { mode: 'emergency', writing: { module: S } });
+check(g, 'invalid link: left out of the print and reported before printing', badM.writingErrors.length === 1 && /Period 1/.test(badM.writingErrors[0]) && !/example\.com/.test(B.renderPackHTML(badM, { writingModule: S })));
+const xw = clone(W1); xw.classes[0].writingNotes = '<img src=x onerror=alert(1)>'; xw.classes[0].writingTime = '<script>x</script>';
+const xwh = B.renderPackHTML(B.buildPack(xw, { writing: { module: S } }), { writingModule: S });
+check(g, 'notes and time slot are escaped', !/<img src=x|<script>x/.test(xwh) && /&lt;img/.test(xwh));
+const copyAll = JSON.stringify(S.COPY) + bl;
+check(g, 'brand: never called a "game"', !/\bgames?\b|in-game|gameplay/i.test(copyAll + fs.readFileSync(path.join(root, 'js/scripto.js'), 'utf8')));
+check(g, 'brand: no prices or upsells in the writing activity copy', !/\$\s?\d|price|upgrade|buy|subscribe|premium|\bpro\b/i.test(copyAll));
+check(g, 'card copy from spec 4.3, linking out to scriptorerum.com/school', S.COPY.card === 'Add a student writing activity: Scripto writing sessions run from your sub plan. Prepare one at scriptorerum.com/school.' && S.COPY.cardUrl === 'https://scriptorerum.com/school');
+fs.writeFileSync(path.join(outDir, 'pack-writing.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + dayWHtml + '</main>');
+
+// ---------- paper pass-the-page story activity (brand-free) ----------
+g = 'story activity';
+const ST = clone(FIX); Object.assign(ST.classes[0], { storyOn: 'yes', storyPrompt: '', storyMinutes: '4' });
+const stRe = B.importJSON(B.exportJSON(ST));
+check(g, 'saved: export -> import keeps the story settings', stRe.classes[0].storyOn === 'yes' && stRe.classes[0].storyMinutes === '4');
+check(g, 'minutes per turn: junk cleared', B.normalizeBinder({ classes: [{ storyMinutes: '99' }, { storyMinutes: 'abc' }, { storyMinutes: '0' }] }).classes.every(c => c.storyMinutes === ''));
+check(g, 'storyOn only accepts yes', B.normalizeBinder({ classes: [{ storyOn: 'maybe' }] }).classes[0].storyOn === '');
+const stHtml = B.renderPackHTML(B.buildPack(ST, { mode: 'emergency' }));
+const stSheets = (stHtml.match(/<section class="sheet/g) || []).length;
+check(g, 'adds two sheets (sub instructions + story page) only for that period', stSheets === 6 + 2, String(stSheets));
+check(g, 'story sheets follow their period', /Period 3 - Math 7<\/h2>[\s\S]*?<\/section><section class="sheet story">[\s\S]*?<section class="sheet story-page">/.test(stHtml));
+check(g, 'groups, timed turns and pass-the-page steps', /groups of 3 or 4/i.test(stHtml) && /Every 4 minutes, say \u201cPass the page.\u201d/.test(stHtml) && /Write the ending/.test(stHtml));
+check(g, 'timing guide uses the minutes per turn', /8 turns \u00d7 4 min = about 32 min/.test(stHtml));
+check(g, 'blank starter uses a ready-made one', B.STORY_STARTERS.some(x => stHtml.indexOf(x) > -1));
+const ST2 = clone(ST); ST2.classes[0].storyPrompt = 'The <b>lights</b> went out.';
+check(g, 'teacher\u2019s own starter printed (escaped)', /The &lt;b&gt;lights&lt;\/b&gt; went out\./.test(B.renderPackHTML(B.buildPack(ST2))));
+check(g, 'paper only: no devices, accounts, links or QR', /no devices or accounts/.test(stHtml) && !/<a |<svg|http/.test(stHtml.split('sheet story')[1]));
+check(g, 'brand-free: no Scripto or other brand on the story sheets', !/scripto|rerum/i.test(stHtml));
+check(g, 'reminds students not to use classmates\u2019 real names', /classmates\u2019 real names/.test(stHtml));
+check(g, 'story page has 8 turn boxes', (stHtml.match(/class="turn"/g) || []).length === 8);
+check(g, 'off by default: base pack unchanged', !/sheet story/.test(B.renderPackHTML(B.buildPack(FIX))));
+fs.writeFileSync(path.join(outDir, 'pack-story.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + stHtml + '</main>');
+
 // ---------- pages: honesty & privacy ----------
 g = 'pages';
-const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'styles.css', 'README.md'];
+const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'js/scripto.js', 'styles.css', 'README.md'];
 const all = files.map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
-check(g, 'no Rerum or Rerum product names in site files', !/rerum|scripto|phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu/i.test(all));
+check(g, 'no other Rerum brand names anywhere in site files', !/phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu|rerum solutions/i.test(all + fs.readFileSync(path.join(root, 'js/scripto.js'), 'utf8')));
+// Scripto is the single approved exception, and it is fenced into the optional module + its wiring.
+const SCRIPTO_OK = ['js/scripto.js', 'js/config.js', 'js/binder.js', 'binder.html', 'README.md'];
+const leaky = files.filter(f => SCRIPTO_OK.indexOf(f) < 0 && /scripto|rerum/i.test(fs.readFileSync(path.join(root, f), 'utf8')));
+check(g, 'Scripto named only in the optional module and its wiring', !leaky.length, leaky.join(', '));
+check(g, 'landing, compare, one-day tool, core and pack code are Scripto-free', !/scripto|rerum/i.test(['index.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder-core.js', 'styles.css'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n')));
 check(g, 'no analytics or tracking scripts', !/google-analytics|gtag\(|googletagmanager|plausible|mixpanel|segment\.com|hotjar|clarity\.ms/i.test(all));
 const binderJs = fs.readFileSync(path.join(root, 'js/binder.js'), 'utf8') + fs.readFileSync(path.join(root, 'js/binder-core.js'), 'utf8');
 check(g, 'binder code makes no network calls', !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.sendBeacon/.test(binderJs));
+const wsJs = fs.readFileSync(path.join(root, 'js/scripto.js'), 'utf8') + fs.readFileSync(path.join(root, 'js/vendor/qrcode.js'), 'utf8');
+check(g, 'writing-session module and QR library make no network calls', !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource|import\(/.test(wsJs));
+check(g, 'no iframe or embed anywhere', !/<iframe|<embed|<object|createElement\(['"]iframe/i.test(all + wsJs));
+check(g, 'QR library is the MIT one, license kept', /Licensed under the MIT license/.test(wsJs) && fs.existsSync(path.join(root, 'js/vendor/LICENSE-qrcode-generator.txt')));
 const cmp = fs.readFileSync(path.join(root, 'compare.html'), 'utf8');
 const rows = cmp.split('<tbody>')[1].split('<tr><th>').slice(1);
 check(g, 'compare page: 6 rows (Sub-Ready + 5 tools)', rows.length === 6, String(rows.length));

@@ -34,6 +34,18 @@
     ['supplies', 'Where supplies and materials are', true],
     ['anyDay', 'Any-day plan (no-prep work for a surprise absence)', true]
   ];
+  // Optional per-period extras (never required, never in the gap check).
+  //   writing*: an optional link-out writing session (only shown when the optional writing-session flag is on; the module is passed in).
+  //   story*:   the paper pass-the-page story activity (no accounts, no devices).
+  var EXTRA_FIELDS = [
+    ['writingLink', 'Writing session link', 300], ['writingTime', 'Time slot', 60], ['writingNotes', 'Notes for the sub', 600],
+    ['storyOn', 'Add the pass-the-page story activity', 5], ['storyPrompt', 'Story starter', 400], ['storyMinutes', 'Minutes per turn', 3]
+  ];
+  var STORY_STARTERS = [
+    'The classroom door opened by itself, and on the floor was a map nobody had seen before.',
+    'Our class pet escaped at lunch, and it left a trail of tiny footprints that led somewhere surprising.',
+    'Every clock in the school stopped at 10:14, except one.'
+  ];
 
   function str(v, max) {
     if (v == null) return '';
@@ -48,6 +60,7 @@
   function emptyClass(label) {
     var c = { id: newId() };
     CLASS_FIELDS.forEach(function (f) { c[f[0]] = ''; });
+    EXTRA_FIELDS.forEach(function (f) { c[f[0]] = ''; });
     c.label = label || '';
     return c;
   }
@@ -75,6 +88,9 @@
       seen[id] = 1; c.id = id;
       CLASS_FIELDS.forEach(function (f) { c[f[0]] = str(x[f[0]], f[0] === 'label' || f[0] === 'location' ? 80 : (f[0] === 'start' || f[0] === 'end' ? 20 : MAX_FIELD)); });
       if (blank(c.label)) c.label = 'Period ' + (i + 1);
+      EXTRA_FIELDS.forEach(function (f) { c[f[0]] = str(x[f[0]], f[2]); });
+      c.storyOn = (c.storyOn === 'yes' || x.storyOn === true) ? 'yes' : '';
+      c.storyMinutes = /^\d{1,2}$/.test(c.storyMinutes.trim()) && +c.storyMinutes >= 1 && +c.storyMinutes <= 15 ? String(+c.storyMinutes) : '';
       return c;
     });
     if (!b.classes.length) b.classes = [emptyClass('Period 1')];
@@ -199,6 +215,9 @@
       ? b.classes.filter(function (c) { return opts.periods.indexOf(c.id) > -1; })
       : b.classes.slice();
     var lessons = opts.lessons || {};
+    var S = opts.writing && opts.writing.module ? opts.writing.module : null;
+    var writingToday = (opts.writing && opts.writing.today) || {};
+    var writingErrors = [];
     var periods = chosen.map(function (c, idx) {
       var t = classTimes(c);
       var today = mode === 'day' ? str(lessons[c.id]) : '';
@@ -206,8 +225,17 @@
       if (!blank(today)) { plan = today; source = 'today'; }
       else if (!blank(c.anyDay)) { plan = c.anyDay; source = 'any-day'; }
       else { plan = ''; source = 'missing'; }
-      return { id: c.id, order: idx, label: c.label, location: c.location || b.room, start: t.start, end: t.end, time: timeLabel(t),
-        plan: plan, source: source, routines: c.routines, seating: c.seating, helpers: c.helpers, supplies: c.supplies };
+      var p = { id: c.id, order: idx, label: c.label, location: c.location || b.room, start: t.start, end: t.end, time: timeLabel(t),
+        plan: plan, source: source, routines: c.routines, seating: c.seating, helpers: c.helpers, supplies: c.supplies,
+        story: c.storyOn === 'yes' ? { prompt: c.storyPrompt, minutes: +c.storyMinutes || 3 } : null, writing: null };
+      if (S) {
+        // Today's day-plan entry wins over the binder period's saved one. Only a validated link survives.
+        var tw = mode === 'day' && writingToday[c.id] && !blank(writingToday[c.id].link) ? writingToday[c.id] : { link: c.writingLink, time: c.writingTime, notes: c.writingNotes };
+        var v = S.validateLink(tw.link, { students: b.students });
+        if (v.ok) p.writing = { link: str(tw.link, 300), time: str(tw.time, 60), notes: str(tw.notes, 600) };
+        else if (!v.empty) writingErrors.push(c.label + ': ' + v.error);
+      }
+      return p;
     });
     // Stable sort by start time; untimed periods keep their order at the end.
     periods.sort(function (x, y) {
@@ -224,7 +252,7 @@
       teacher: b.teacher, room: b.room, school: b.school,
       arrival: b.arrival, bathroom: b.bathroom, emergency: b.emergency, health: b.health,
       dismissal: b.dismissal, leave: b.leave, contacts: b.contacts,
-      periods: periods, missing: missing
+      periods: periods, missing: missing, students: b.students, writingErrors: writingErrors
     };
   }
 
@@ -242,7 +270,38 @@
     }).join('') + '</tbody></table>';
   }
 
-  function renderPackHTML(m) {
+  // Paper pass-the-page story activity: one instruction sheet for the sub + one story page to copy per group. Brand-free.
+  function storySheetsHTML(p, seq) {
+    var min = p.story.minutes || 3;
+    var starter = blank(p.story.prompt) ? STORY_STARTERS[seq % STORY_STARTERS.length] : p.story.prompt;
+    var h = '<section class="sheet story"><p class="pk-kicker">' + esc(p.label) + (p.time ? ' \u00b7 ' + esc(p.time) : '') + ' \u00b7 paper only, no devices or accounts</p><h2>Pass-the-page story</h2>';
+    h += '<p>Small groups write one story together. Each student writes for ' + min + ' minute' + (min === 1 ? '' : 's') + ', then the page moves on. About ' + (6 * min) + '\u2013' + (8 * min) + ' minutes, plus time to read aloud.</p>';
+    h += '<div class="pk-row"><h4>Story starter (write it on the board)</h4><p class="starter">\u201c' + esc(starter) + '\u201d</p></div>';
+    h += '<div class="pk-row"><h4>How to run it</h4><ol class="story-steps">' + [
+      'Make groups of 3 or 4. Give each group one copy of the story page.',
+      'Each student writes their first name or initials on the back of the page, so the teacher knows who was in the group.',
+      'The first writer copies the starter and keeps going. Everyone else in the group reads along quietly.',
+      'Every ' + min + ' minute' + (min === 1 ? '' : 's') + ', say \u201cPass the page.\u201d The page goes to the next person, who reads the last few lines and continues the story.',
+      'Keep going until everyone has had two turns. On the last turn, say \u201cWrite the ending.\u201d',
+      'Each group picks a reader and reads its story aloud (or swaps with another group to read).',
+      'Collect the pages in the tray with the rest of the work.'
+    ].map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol></div>';
+    h += '<div class="pk-row"><h4>Rules to say out loud</h4><ul><li>Keep it school-appropriate.</li><li>Don\u2019t use classmates\u2019 real names in the story.</li><li>Build on what the last writer wrote \u2014 no erasing it.</li></ul></div>';
+    h += '<div class="pk-row"><h4>Timing guide</h4><table class="pk-sched story-timing"><tbody>' +
+      '<tr><th>Groups of 3</th><td>6 turns \u00d7 ' + min + ' min = about ' + (6 * min) + ' min, plus reading aloud</td></tr>' +
+      '<tr><th>Groups of 4</th><td>8 turns \u00d7 ' + min + ' min = about ' + (8 * min) + ' min, plus reading aloud</td></tr>' +
+      '</tbody></table><p class="hint">Short on time? Stop after one turn each and go straight to \u201cWrite the ending.\u201d</p></div>';
+    h += '</section>';
+    h += '<section class="sheet story-page"><p class="pk-kicker">Copy one per group</p><h2>Our story</h2><p class="starter">Starter: \u201c' + esc(starter) + '\u201d</p>';
+    for (var i = 1; i <= 8; i++) h += '<div class="turn"><span class="turn-n">Turn ' + i + '</span><div class="lines"></div></div>';
+    h += '</section>';
+    return h;
+  }
+
+  // opts.writingModule: the optional writing-session module (only passed when its config flag is on).
+  function renderPackHTML(m, opts) {
+    opts = opts || {};
+    var S = opts.writingModule || null;
     var who = [m.teacher, m.room ? 'Room ' + m.room.replace(/^room\s*/i, '') : '', m.school].filter(function (x) { return !blank(x); }).join(' \u00b7 ');
     var h = [];
     h.push('<div class="pack" data-mode="' + esc(m.mode) + '">');
@@ -252,7 +311,7 @@
     h.push('<p class="pk-who">' + (who ? esc(who) : '<span class="ph">' + esc(NP) + '</span>') + '</p>');
     h.push('<p class="pk-date">' + (blank(m.date) ? 'Date: ____________________' : esc(m.date)) + '</p>');
     h.push('<p class="pk-welcome">Welcome, and thank you for covering this class. This pack has the schedule, a plan for each period, and an emergency sheet. Anything marked \u201cNot provided\u201d wasn\u2019t in my notes \u2014 please ask the office.</p>');
-    h.push('<h3>In this pack</h3><ol class="pk-toc"><li>Schedule</li>' + m.periods.map(function (p) { return '<li>' + esc(p.label) + '</li>'; }).join('') + '<li>Emergency sheet</li></ol>');
+    h.push('<h3>In this pack</h3><ol class="pk-toc"><li>Schedule</li>' + m.periods.map(function (p) { return '<li>' + esc(p.label) + (p.story ? ' (+ pass-the-page story sheets)' : '') + '</li>'; }).join('') + '<li>Emergency sheet</li></ol>');
     h.push(row('When you arrive', m.arrival));
     h.push('<div class="pk-row"><h4>Who to contact</h4>' + contactsHTML(m.contacts) + '</div>');
     h.push('</section>');
@@ -268,6 +327,7 @@
     h.push(row('Before you leave', m.leave));
     h.push('</section>');
     // 3. Per-period plans
+    var storySeq = 0;
     m.periods.forEach(function (p) {
       h.push('<section class="sheet period"><p class="pk-kicker">' + esc(p.time || 'Time not provided') + (blank(p.location) ? '' : ' \u00b7 ' + esc(p.location)) + '</p><h2>' + esc(p.label) + '</h2>');
       h.push('<div class="pk-row"><h4>' + (p.source === 'today' ? 'Today\u2019s lesson' : 'Plan (any-day, no prep needed)') + '</h4>' + para(p.plan) + '</div>');
@@ -275,8 +335,11 @@
       h.push(row('Seating & help notes', p.seating));
       h.push(row('Students who can help', p.helpers));
       h.push(row('Where things are', p.supplies));
+      if (S && p.writing) h.push(S.renderBlock(p.writing, { students: m.students }));
+      if (p.story) h.push('<div class="pk-row"><h4>Pass-the-page story</h4><p>Paper writing activity for this period: see the \u201cPass-the-page story\u201d sheet right after this one.</p></div>');
       h.push('<div class="pk-row notes"><h4>Notes for me</h4><div class="lines"></div></div>');
       h.push('</section>');
+      if (p.story) h.push(storySheetsHTML(p, storySeq++));
     });
     // 4. Emergency sheet
     h.push('<section class="sheet emergency"><h2>Emergency sheet</h2>');
@@ -312,7 +375,7 @@
 
   return {
     VERSION: VERSION, STORAGE_KEY: STORAGE_KEY, MAX_CLASSES: MAX_CLASSES, MAX_CONTACTS: MAX_CONTACTS,
-    SHARED_FIELDS: SHARED_FIELDS, CLASS_FIELDS: CLASS_FIELDS,
+    SHARED_FIELDS: SHARED_FIELDS, CLASS_FIELDS: CLASS_FIELDS, EXTRA_FIELDS: EXTRA_FIELDS, STORY_STARTERS: STORY_STARTERS,
     emptyBinder: emptyBinder, emptyClass: emptyClass, normalizeBinder: normalizeBinder,
     exportJSON: exportJSON, importJSON: importJSON, save: save, load: load, clear: clear,
     access: access, classTimes: classTimes, readiness: readiness,

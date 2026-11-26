@@ -1,6 +1,10 @@
 """Browser tests for the class binder, emergency plan, multi-period plan, print pack and compare page.
 Usage: python3 tests/e2e_binder.py [base_url] [prefix]   (no URL = local server on 127.0.0.1:8766)"""
 import json, subprocess, sys, time, pathlib, tempfile, re
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 from playwright.sync_api import sync_playwright
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -50,6 +54,7 @@ with sync_playwright() as p:
     ok('says it is saved only in this browser', 'only in this browser' in pg.text_content('.privacy-note'))
     ok('plans described as not on sale yet', 'aren\u2019t on sale yet' in pg.text_content('#earlyNote'))
     ok('default contact roles offered', pg.locator('.contact-row').count() == 3)
+    ok('writing activity flag off (shipped config): no Scripto anywhere on the page', 'scripto' not in pg.inner_text('body').lower() and not pg.locator('a[href*="scriptorerum"]').count() and pg.locator('.writing-fields, #writingCard, .day-writing').count() == 0)
 
     # 1. Saved class profile: fill, save, reload
     fill_binder(pg)
@@ -177,6 +182,87 @@ with sync_playwright() as p:
     ok('flag off: binder locked behind the plan', pg3.is_visible('#gate') and not pg3.is_visible('#app'))
     ok('flag off, no PRO_URL: "Coming soon", no link', pg3.text_content('#gateBtn') == 'Coming soon' and pg3.get_attribute('#gateBtn', 'href') is None)
     ctx3.close()
+
+    # Optional writing activity (Scripto) with the flag turned on for this test only, plus the paper story activity
+    TOK = 'h7Kq2xW9pL'; WANT = 'https://scriptorerum.com/school/s/' + TOK + '?ref=subready'
+    ctx4 = b.new_context(viewport={'width': 1280, 'height': 900})
+    ctx4.route('**/js/config.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body="window.SUB_READY_CONFIG={PRO_URL:'',EARLY_ACCESS:true,SCRIPTO_ACTIVITY:true};"))
+    req4, outside4 = [], []
+    def on_route(route):
+        outside4.append(route.request.url); route.abort()
+    ctx4.route(re.compile(r'^https?://(?!127\.0\.0\.1|localhost|rerum-svg\.github\.io).*'), on_route)
+    pg4 = ctx4.new_page(); pg4.on('dialog', lambda d: d.accept())
+    pg4.on('pageerror', lambda e: errors.append(str(e)))
+    pg4.on('request', lambda r: req4.append(r.url))
+    pg4.goto(base + 'binder.html', wait_until='networkidle')
+    fill_binder(pg4)
+    card4 = pg4.locator('#writingCard')
+    ok('flag on: writing activity card shown', card4.is_visible() and 'Prepare one at scriptorerum.com/school' in card4.text_content())
+    ca = card4.locator('a')
+    ok('flag on: card links out in a new tab with rel=noopener', ca.get_attribute('href') == 'https://scriptorerum.com/school?ref=subready' and ca.get_attribute('target') == '_blank' and 'noopener' in (ca.get_attribute('rel') or ''))
+    ok('flag on: privacy line shown on the binder page', 'Sub-Ready itself still uploads nothing. If you add a Scripto writing activity, that part runs on scriptorerum.com under Scripto\u2019s School privacy terms.' in card4.text_content())
+    p0 = pg4.locator('.period-card').nth(0)
+    ok('flag on: each period has the optional "Student writing activity (Scripto)" field', pg4.locator('.writing-fields').count() == 3 and 'Student writing activity (Scripto)' in p0.locator('.writing-fields legend').text_content())
+    p0.locator('[data-k=writingLink]').fill('https://example.com/school/s/' + TOK)
+    ok('link check: wrong site refused inline', 'starts with https://scriptorerum.com/school/s/' in p0.locator('[data-link-msg]').text_content())
+    p0.locator('[data-k=writingLink]').fill('https://scriptorerum.com/school/s/' + TOK + '?student=Maya')
+    ok('link check: good link accepted, shows the cleaned link', WANT in p0.locator('[data-link-msg]').text_content() and 'Maya' not in p0.locator('[data-link-msg]').text_content())
+    p0.locator('[data-k=writingTime]').fill('Last 20 minutes')
+    p0.locator('[data-k=writingNotes]').fill('Groups are already set in the session.')
+    pg4.evaluate("document.querySelectorAll('.period-card').forEach(d => d.open = true)")
+    pg4.locator('.period-card').nth(1).locator('[data-k=storyOn]').check()
+    pg4.locator('.period-card').nth(1).locator('[data-k=storyMinutes]').fill('4')
+    pg4.wait_for_timeout(500)
+    pg4.reload(wait_until='networkidle')
+    sv = pg4.evaluate('window.__subReadyBinder.binder')
+    ok('fields saved: writing link, time slot and notes survive reload', sv['classes'][0]['writingLink'].endswith('?student=Maya') and sv['classes'][0]['writingTime'] == 'Last 20 minutes')
+    ok('fields saved: story activity survives reload', sv['classes'][1]['storyOn'] == 'yes' and pg4.locator('.period-card').nth(1).locator('[data-k=storyOn]').is_checked())
+    # Day plan field for today (period 3 = third card, id p5? use the row id)
+    dw_id = pg4.locator('.day-row').nth(2).get_attribute('data-id')
+    pg4.locator('.day-row').nth(2).locator('summary').click()
+    pg4.locator('[data-dw=link][data-dw-id="%s"]' % dw_id).fill('https://scriptorerum.com/school/s/TodayOnly42')
+    pg4.locator('[data-dw=time][data-dw-id="%s"]' % dw_id).fill('1:10')
+    pg4.fill('#dayDate', 'Tuesday, December 2')
+    pg4.click('#dayBtn'); pg4.wait_for_selector('#pack .sheet')
+    blocks = pg4.locator('#pack .writing-activity')
+    ok('print block: shown for the saved period and today\u2019s period (2)', blocks.count() == 2, blocks.count())
+    b0 = blocks.nth(0)
+    steps = b0.locator('.wa-steps li').all_text_contents()
+    ok('print block: the 3 steps from spec 4.3', steps == ['Open this link on the teacher computer.', 'Press Start.', 'Put the code on the board. Students go to scriptorerum.com/join.'], steps)
+    a0 = b0.locator('.wa-link a')
+    ok('print block: link as text, new tab, rel=noopener', a0.text_content() == WANT and a0.get_attribute('href') == WANT and a0.get_attribute('target') == '_blank' and 'noopener' in a0.get_attribute('rel'))
+    ok('print block: QR is inline SVG (no image request)', b0.locator('.wa-qr svg').count() == 1 and b0.locator('img').count() == 0)
+    ok('no iframe anywhere', pg4.locator('iframe, embed, object').count() == 0)
+    hrefs = pg4.eval_on_selector_all('a[href*="scriptorerum"]', 'els => els.map(e => e.href)')
+    secrets = ['Jaylen', 'Noah', 'Ava', 'Maya', 'Will', 'Grace', 'Rivera', '214', 'Lincoln', 'Door']
+    ok('privacy: no student name, roster or binder data in any Scripto link', hrefs and all(not any(x.lower() in h.lower() for x in secrets) for h in hrefs), hrefs)
+    if cv2 is not None:
+        qp = tempfile.mktemp(suffix='.png'); b0.locator('.wa-qr svg').screenshot(path=qp)
+        data, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(qp))
+        ok('QR code scans to exactly the cleaned link', data == WANT, data)
+    else:
+        ok('QR code scan skipped (no OpenCV)', True)
+    ok('story activity: two paper sheets added after its period', pg4.locator('#pack .sheet.story').count() == 1 and pg4.locator('#pack .sheet.story-page').count() == 1)
+    shot_css4 = pg4.add_style_tag(content='header.site{position:static !important}')
+    pg4.locator('#pack .sheet.period:has(.writing-activity)').nth(0).screenshot(path=str(screens / (prefix + 'scripto-print-block.png')))
+    pg4.locator('#pack .sheet.story').screenshot(path=str(screens / (prefix + 'story-activity-sheet.png')))
+    shot_css4.evaluate('e => e.remove()')
+    pg4.emulate_media(media='print')
+    pdf4 = screens / (prefix + 'scripto-day-pack.pdf')
+    pg4.pdf(path=str(pdf4), format='Letter', margin={'top': '14mm', 'bottom': '14mm', 'left': '14mm', 'right': '14mm'})
+    pages4 = int(re.search(r'Pages:\s+(\d+)', subprocess.check_output(['pdfinfo', str(pdf4)], text=True)).group(1))
+    n_sheets = pg4.locator('#pack .sheet').count()
+    ok('print PDF: one page per sheet incl. story sheets (%d)' % n_sheets, pages4 == n_sheets, pages4)
+    t4 = subprocess.check_output(['pdftotext', '-layout', str(pdf4), '-'], text=True)
+    flat = re.sub(r'\s+', ' ', t4)
+    ok('print PDF: block title, steps and link printed', 'Student writing activity (Scripto)' in flat and 'Press Start.' in flat and 'scriptorerum.com/join' in flat and WANT in flat.replace(' ', '') )
+    ok('print PDF: privacy line printed word for word', 'Sub-Ready itself still uploads nothing. If you add a Scripto writing activity, that part runs on scriptorerum.com under Scripto\u2019s School privacy terms.' in flat)
+    ok('print PDF: pass-the-page story sheets printed', 'Pass-the-page story' in flat and 'Our story' in flat and 'Every 4 minutes' in flat)
+    ok('print PDF: never calls it a game', not re.search(r'\bgames?\b', flat, re.I))
+    pg4.emulate_media(media='screen')
+    own4 = [u for u in req4 if not u.startswith(base) and not u.startswith('data:') and not u.startswith('blob:')]
+    ok('flag on: no requests to Scripto or any other server', not own4 and not outside4, ' '.join((own4 + outside4)[:5]))
+    ctx4.close()
 
     # Compare page
     r = pg.goto(base + 'compare.html', wait_until='networkidle')

@@ -3,6 +3,7 @@ PASS labeled "Free early access"
 PASS says it is saved only in this browser
 PASS plans described as not on sale yet
 PASS default contact roles offered
+PASS writing activity flag off (shipped config): no Scripto anywhere on the page
 PASS after reload: status says loaded -- Loaded from this browser
 PASS after reload: shared fields kept
 PASS after reload: 3 periods kept
@@ -53,6 +54,28 @@ PASS landing: binder labeled free early access
 PASS landing: plans coming soon, button has no link
 PASS flag off: binder locked behind the plan
 PASS flag off, no PRO_URL: "Coming soon", no link
+PASS flag on: writing activity card shown
+PASS flag on: card links out in a new tab with rel=noopener
+PASS flag on: privacy line shown on the binder page
+PASS flag on: each period has the optional "Student writing activity (Scripto)" field
+PASS link check: wrong site refused inline
+PASS link check: good link accepted, shows the cleaned link
+PASS fields saved: writing link, time slot and notes survive reload
+PASS fields saved: story activity survives reload
+PASS print block: shown for the saved period and today’s period (2) -- 2
+PASS print block: the 3 steps from spec 4.3 -- ['Open this link on the teacher computer.', 'Press Start.', 'Put the code on the board. Students go to scriptorerum.com/join.']
+PASS print block: link as text, new tab, rel=noopener
+PASS print block: QR is inline SVG (no image request)
+PASS no iframe anywhere
+PASS privacy: no student name, roster or binder data in any Scripto link -- ['https://scriptorerum.com/school?ref=subready', 'https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready', 'https://scriptorerum.com/school/s/TodayOnly42?ref=subready']
+PASS QR code scans to exactly the cleaned link -- https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready
+PASS story activity: two paper sheets added after its period
+PASS print PDF: one page per sheet incl. story sheets (8) -- 8
+PASS print PDF: block title, steps and link printed
+PASS print PDF: privacy line printed word for word
+PASS print PDF: pass-the-page story sheets printed
+PASS print PDF: never calls it a game
+PASS flag on: no requests to Scripto or any other server
 PASS compare page loads (HTTP 200)
 PASS compare page: 6 rows
 PASS compare page: 5 source links
