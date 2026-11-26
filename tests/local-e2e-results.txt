@@ -1,0 +1,50 @@
+PASS page loads (HTTP 200)
+PASS device AI status shown -- available (first use downloads the model)
+PASS Pro button shows coming-soon state, no link -- Pro coming soon, join the list
+PASS empty input shows error -- Paste your plan first — even rough notes are fine.
+PASS elem-2nd: gap prompt has no student names
+PASS elem-2nd: 5-8 questions in UI -- 8
+PASS elem-2nd: script prompt has no student names
+PASS elem-2nd: names restored in output
+PASS elem-2nd: no tokens left
+PASS elem-2nd: right name in right place: Will R.'s group goes first
+PASS elem-2nd: right name in right place: Maya L.: Line leader
+PASS elem-2nd: right name in right place: Will R.: Knows where everything is
+PASS ms-math: gap prompt has no student names
+PASS ms-math: 5-8 questions in UI -- 6
+PASS ms-math: script prompt has no student names
+PASS ms-math: names restored in output
+PASS ms-math: no tokens left
+PASS ms-math: right name in right place: chatty; Grace S sits up front
+PASS ms-math: right name in right place: Destiny M: Can pass out chromebooks
+PASS hs-english: gap prompt has no student names
+PASS hs-english: 5-8 questions in UI -- 8
+PASS hs-english: script prompt has no student names
+PASS hs-english: names restored in output
+PASS hs-english: no tokens left
+PASS hs-english: right name in right place: May B. leads group 2
+PASS hs-english: right name in right place: May B.: Group 2 leader
+PASS hs-english: right name in right place: Hunter J.: Tech help
+PASS k-halfday: gap prompt has no student names
+PASS k-halfday: 5-8 questions in UI -- 8
+PASS k-halfday: script prompt has no student names
+PASS k-halfday: names restored in output
+PASS k-halfday: no tokens left
+PASS k-halfday: right name in right place: Jaylen sits next to you
+PASS k-halfday: right name in right place: Ava T. has an EpiPen
+PASS hs-chem-split: gap prompt has no student names
+PASS hs-chem-split: 5-8 questions in UI -- 8
+PASS hs-chem-split: script prompt has no student names
+PASS hs-chem-split: names restored in output
+PASS hs-chem-split: no tokens left
+PASS hs-chem-split: right name in right place: Art and Will cannot sit together
+PASS malformed AI reply shows friendly error -- Couldn’t find the plan data in that reply. Ask the chatbot: "Please resend only the JSON in a ```json block."
+PASS no-AI mode produces a script
+PASS ms-math: gap prompt has no student names
+PASS ms-math: 5-8 questions in UI -- 6
+PASS ms-math: script prompt has no student names
+PASS ms-math: names restored in output
+PASS ms-math: no tokens left
+PASS ms-math: right name in right place: chatty; Grace S sits up front
+PASS ms-math: right name in right place: Destiny M: Can pass out chromebooks
+PASS no JS errors

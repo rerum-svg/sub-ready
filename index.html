@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sub-Ready: turn rough notes into a sub plan a stranger can follow</title>
+<meta name="description" content="Free tool for teachers. Paste your shorthand plan, answer a few questions, and print a minute-by-minute substitute script. Runs in your browser; student names never leave your device.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e8743b'/><path d='M18 34l9 9 19-21' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip no-print" href="#tool">Skip to the tool</a>
+<header class="site no-print">
+  <div class="wrap bar">
+    <a class="brand" href="#top"><span class="logo" aria-hidden="true">&#10003;</span> Sub-Ready</a>
+    <nav><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#tool" class="btn small">Start</a></nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero no-print">
+  <div class="wrap">
+    <p class="eyebrow">For teachers who are sick at 5:45 AM</p>
+    <h1>Your rough notes, turned into a plan a stranger can follow.</h1>
+    <p class="lede">Sub plans are hard because a substitute can&rsquo;t ask you what &ldquo;the usual warm-up&rdquo; or &ldquo;the blue bin&rdquo; means. Sub-Ready finds those gaps, asks you a few quick questions, and turns <em>your own words</em> into a printable, minute-by-minute script.</p>
+    <p><a class="btn" href="#tool">Make a sub plan</a> <span class="muted">Free. No account. Nothing uploaded.</span></p>
+  </div>
+</section>
+
+<section id="how" class="wrap how no-print">
+  <h2>How it works</h2>
+  <ol class="steps3">
+    <li><strong>Paste your shorthand.</strong> Typos, abbreviations and half-sentences are fine. Add your bell schedule and routines if you have them handy.</li>
+    <li><strong>Fill the gaps.</strong> Sub-Ready flags every line a stranger couldn&rsquo;t act on and asks you 5&ndash;8 specific questions.</li>
+    <li><strong>Print the script.</strong> Times, where things are, routines, helpers, emergency info and what to leave done, in one clean page set.</li>
+  </ol>
+  <div class="honest">
+    <h3>What it will and won&rsquo;t do</h3>
+    <ul>
+      <li>It only reorganizes what <em>you</em> wrote. It never invents activities, page numbers or rules.</li>
+      <li>Anything you didn&rsquo;t provide shows up as <span class="ph-inline">Not provided &mdash; ask the office</span>, so nothing is quietly made up.</li>
+      <li>Lines that use words not found in your notes are marked <span class="chip">Check</span> so you can review them.</li>
+      <li>It&rsquo;s a new, small tool. Please read the final plan before you print it.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="privacy" class="wrap privacy no-print">
+  <h2>Privacy, plainly</h2>
+  <ul>
+    <li><strong>Nothing is uploaded.</strong> This is a static web page. There is no server, no account, no analytics and no database.</li>
+    <li><strong>Student names are hidden first.</strong> Before any AI step, the names you list are swapped for placeholders like [STUDENT_1] on your device. They&rsquo;re put back only in the final printout.</li>
+    <li><strong>Two ways to use AI:</strong> Chrome&rsquo;s built-in on-device model (runs on your computer), or copy a ready-made prompt into any chatbot you already use. In copy mode you can see exactly what you&rsquo;re pasting.</li>
+    <li>Don&rsquo;t put passwords, medical details or student ID numbers in your notes. Keep those in your printed binder.</li>
+  </ul>
+</section>
+
+<section id="tool" class="tool wrap">
+  <h2 class="no-print">Make a sub plan</h2>
+
+  <div id="step-input" class="card no-print">
+    <h3><span class="num">1</span> Your notes</h3>
+    <label for="plan">Paste your plan for the day (shorthand is fine)</label>
+    <textarea id="plan" rows="9" placeholder="e.g.&#10;8:15 morning work - the usual&#10;reading groups, Maya's grp first&#10;math pg 112 1-15 odd, then stations&#10;lunch 11:30&#10;pack up / leave WS in the bin"></textarea>
+    <p class="hint">Tip: one activity per line. Times help, but they&rsquo;re optional.</p>
+
+    <details class="more" open>
+      <summary>Class info (optional, but it makes the plan much better)</summary>
+      <div class="grid2">
+        <div><label for="className">Class / grade</label><input id="className" placeholder="e.g. 2nd grade, Room 14"></div>
+        <div><label for="periods">Period times / bell schedule</label><textarea id="periods" rows="4" placeholder="P1 8:00-8:50&#10;P2 8:55-9:45&#10;Lunch 11:30-12:05"></textarea></div>
+        <div><label for="routines">Routines</label><textarea id="routines" rows="4" placeholder="Attention signal, bathroom, attendance, early finishers&hellip;"></textarea></div>
+        <div><label for="locations">Seating / where things are</label><textarea id="locations" rows="4" placeholder="Sub folder - top drawer of my desk&#10;Seating chart - clipboard by the door"></textarea></div>
+        <div><label for="helpers">Students who can help / notes</label><textarea id="helpers" rows="4" placeholder="Will R. - reliable, knows the routine"></textarea></div>
+        <div><label for="emergency">Emergency info</label><textarea id="emergency" rows="4" placeholder="Fire exit: left out the door, Door 6. Office ext 100."></textarea></div>
+      </div>
+    </details>
+
+    <details class="more" open>
+      <summary>Student names to hide from the AI</summary>
+      <div class="grid2">
+        <div>
+          <label for="names">Names (one per line or comma-separated)</label>
+          <textarea id="names" rows="4" placeholder="Maya L.&#10;Will R.&#10;Jaylen"></textarea>
+        </div>
+        <div>
+          <label for="roster">Or paste a roster and detect names</label>
+          <textarea id="roster" rows="4" placeholder="Maya L. - line leader&#10;Will R. (allergy)&#10;Jaylen"></textarea>
+          <button type="button" id="detect" class="btn ghost small">Detect names from roster</button>
+        </div>
+      </div>
+      <p class="hint">Names are swapped for [STUDENT_1], [STUDENT_2]&hellip; on this device before any AI step. Everyday-word names (Will, May, Grace&hellip;) are only hidden where they&rsquo;re clearly names. Check the preview.</p>
+      <details class="preview"><summary>Preview what the AI will see</summary><pre id="maskedPreview"></pre><ul id="maskWarnings" class="small-list"></ul></details>
+    </details>
+
+    <fieldset class="mode">
+      <legend>How should the AI step run?</legend>
+      <label><input type="radio" name="mode" value="device"> <span>On-device AI in Chrome</span> <span id="deviceStatus" class="status">checking&hellip;</span></label>
+      <label><input type="radio" name="mode" value="copy"> <span>Copy-paste with any chatbot you use</span> <span class="status">works on any device</span></label>
+      <label><input type="radio" name="mode" value="none"> <span>No AI (checklist questions only)</span> <span class="status">simplest</span></label>
+    </fieldset>
+    <p id="inputError" class="error" role="alert" hidden></p>
+    <button type="button" id="findGaps" class="btn">Find the gaps</button>
+  </div>
+
+  <div id="step-gaps" class="card no-print" hidden>
+    <h3><span class="num">2</span> Fill the gaps</h3>
+    <div id="copyGaps" class="copybox" hidden>
+      <p><strong>Copy-paste mode.</strong> Copy this prompt into any chatbot, then paste its whole reply below. Student names are already hidden.</p>
+      <textarea id="gapPrompt" rows="6" readonly></textarea>
+      <button type="button" class="btn ghost small" data-copy="gapPrompt">Copy prompt</button>
+      <label for="gapReply">Paste the chatbot&rsquo;s reply</label>
+      <textarea id="gapReply" rows="6" placeholder="Paste the whole reply, including the ```json block"></textarea>
+      <button type="button" id="readGaps" class="btn small">Read reply</button>
+      <button type="button" id="skipGapAI" class="btn ghost small">Skip, use checklist questions</button>
+    </div>
+    <p id="gapError" class="error" role="alert" hidden></p>
+    <div id="gapStatus" class="status-line" hidden></div>
+    <div id="flagsWrap" hidden>
+      <h4>Lines a stranger couldn&rsquo;t act on</h4>
+      <ul id="flags" class="flags"></ul>
+    </div>
+    <form id="qaForm" hidden>
+      <h4>Your answers (skip any you like; skipped ones show as &ldquo;Not provided&rdquo;)</h4>
+      <div id="questions"></div>
+      <button type="button" id="writeScript" class="btn">Write the sub script</button>
+    </form>
+  </div>
+
+  <div id="step-script" class="card no-print" hidden>
+    <h3><span class="num">3</span> Your sub script</h3>
+    <div id="copyScript" class="copybox" hidden>
+      <p><strong>Copy-paste mode.</strong> Copy this second prompt into the same chatbot, then paste the reply.</p>
+      <textarea id="scriptPrompt" rows="6" readonly></textarea>
+      <button type="button" class="btn ghost small" data-copy="scriptPrompt">Copy prompt</button>
+      <label for="scriptReply">Paste the chatbot&rsquo;s reply</label>
+      <textarea id="scriptReply" rows="6" placeholder="Paste the whole reply, including the ```json block"></textarea>
+      <button type="button" id="readScript" class="btn small">Read reply</button>
+      <button type="button" id="basicScript" class="btn ghost small">Skip AI, build a basic version</button>
+    </div>
+    <p id="scriptError" class="error" role="alert" hidden></p>
+    <div id="scriptStatus" class="status-line" hidden></div>
+    <div id="outputActions" class="actions" hidden>
+      <button type="button" id="printBtn" class="btn">Print / save as PDF</button>
+      <button type="button" id="startOver" class="btn ghost">Start a new plan</button>
+    </div>
+  </div>
+
+  <div id="output" class="output"></div>
+</section>
+
+<section id="pro" class="wrap pro no-print">
+  <h2>Sub-Ready Pro <span class="price">$9 one-time</span></h2>
+  <p>The free tool makes unlimited single-day plans. Pro is for teachers who want to set things up once:</p>
+  <ul>
+    <li>A saved binder of your reusable class info (routines, locations, emergency info), kept in this browser only</li>
+    <li>Multiple class periods with their own rosters and routines</li>
+    <li>Extra printable templates: welcome letter, seating chart page, sub feedback note</li>
+  </ul>
+  <a id="proBtn" class="btn" aria-disabled="true">Pro coming soon, join the list</a>
+  <p class="hint" id="proNote">Pro isn&rsquo;t available yet. Nothing is for sale on this page today.</p>
+</section>
+</main>
+
+<footer class="site-foot no-print">
+  <div class="wrap">
+    <p>Sub-Ready is a free, static web page. No accounts, no tracking, no uploads. Always review a plan before you print it.</p>
+  </div>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
