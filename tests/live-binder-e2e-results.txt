@@ -1,0 +1,61 @@
+PASS binder page loads (HTTP 200)
+PASS labeled "Free early access"
+PASS says it is saved only in this browser
+PASS plans described as not on sale yet
+PASS default contact roles offered
+PASS after reload: status says loaded -- Loaded from this browser
+PASS after reload: shared fields kept
+PASS after reload: 3 periods kept
+PASS after reload: period fields kept
+PASS after reload: contacts kept
+PASS saved in localStorage under subready.binder.v1
+PASS gap check: complete binder shows nothing missing -- Nothing obvious is missing. A stranger should be able to run this.
+PASS gap check: vague any-day plan flagged -- 2 things a sub would still need. Blank items print as “Not provided — ask the office.”Period 3 - Math 7Any-day plan, "Do the usual warm-up": "the usual" assumes the sub already knows your routine.Any-
+PASS emergency plan: 6 sheets (cover, schedule, 3 periods, emergency) -- 6
+PASS emergency plan: periods in time order -- ['Period 1 - Math 6', 'Period 3 - Math 7', 'Period 5 - Advisory']
+PASS emergency plan: no "before you print" warning when complete
+PASS print: editor hidden
+PASS print: site header hidden
+PASS print: pack visible
+PASS print: each sheet breaks to a new page
+PASS print: last sheet adds no blank page
+PASS print PDF: one page per sheet (6 pages) -- 6
+PASS print PDF: page 1 is the cover
+PASS print PDF: page 2 is the schedule
+PASS print PDF: last page is the emergency sheet
+PASS print PDF: no editor text leaked
+PASS day plan: unticked period left out (5 sheets) -- 5
+PASS day plan: today’s lesson used
+PASS day plan: other period falls back to any-day plan
+PASS day plan: date on the cover
+PASS export: file named sub-ready-binder.json
+PASS export: file has the binder
+PASS fresh browser starts empty
+PASS import: round trip identical to exported binder
+PASS import: fields shown in the form
+PASS import: saved, survives reload
+PASS import: wrong file shows a clear error
+PASS import: wrong file leaves binder untouched
+PASS delete: status says deleted
+PASS delete: gone after reload
+PASS hand-off: one-day tool opens with the plan filled in
+PASS hand-off: note shown
+PASS hand-off: emergency info carried
+PASS hand-off: listed names carried for masking -- Jaylen
+Noah
+Ava T.
+Maya L.
+Will R.
+Grace S.
+PASS hand-off: no listed student name reaches the AI prompt
+PASS hand-off: used once (cleared after reload)
+PASS landing: binder labeled free early access
+PASS landing: plans coming soon, button has no link
+PASS flag off: binder locked behind the plan
+PASS flag off, no PRO_URL: "Coming soon", no link
+PASS compare page loads (HTTP 200)
+PASS compare page: 6 rows
+PASS compare page: 5 source links
+PASS mobile: no horizontal overflow
+PASS no requests to any other server
+PASS no JS errors

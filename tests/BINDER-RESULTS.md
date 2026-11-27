@@ -1,8 +1,8 @@
 # Class binder test results
 
-Run: 2026-11-26T16:17:09.524Z (UTC)  
+Run: 2026-11-27T11:37:49.534Z (UTC)  
 Command: `node tests/run-binder-tests.js`  
-**85 passed, 0 failed** (85 checks)
+**162 passed, 0 failed** (162 checks)
 
 Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 
@@ -66,8 +66,8 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | print pack | blank lesson falls back to the any-day plan | PASS |  |
 | print pack | period with no plan is marked missing | PASS |  |
 | print pack | untimed period goes last | PASS |  |
-| print pack | pack = cover + schedule + one sheet per period + emergency sheet | PASS | 6 |
-| print pack | order: cover, schedule, periods, emergency | PASS |  |
+| print pack | pack = cover + schedule + one sheet per period + end-of-day note + emergency sheet | PASS | 7 |
+| print pack | order: cover, schedule, periods, end-of-day note, emergency | PASS |  |
 | print pack | student names printed as typed (local only) | PASS |  |
 | print pack | contacts printed by role | PASS |  |
 | print pack | blank date prints a write-in line | PASS |  |
@@ -85,6 +85,83 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | hand-off | today’s lesson wins when typed | PASS |  |
 | hand-off | names to hide = listed names + helpers | PASS | Jaylen Noah Ava T. Maya L. Will R. Grace S. |
 | hand-off | unknown period -> null | PASS |  |
+| quick-win fields | new fields exist on an empty binder | PASS |  |
+| quick-win fields | they are optional (not in the gap check) | PASS |  |
+| quick-win fields | export -> import keeps them | PASS |  |
+| quick-win fields | printed on the schedule page when filled in | PASS |  |
+| quick-win fields | not printed at all when blank (no "Not provided" noise) | PASS |  |
+| quick-win fields | phone policy and rules go to the one-day tool as routines | PASS |  |
+| quick-win fields | pronunciation names join the names hidden from the AI | PASS | Jaylen Noah Ava T. Maya L. Will R. Grace S. Siobhan Nguyen |
+| seating chart | each period starts with an empty 5 x 6 chart | PASS |  |
+| seating chart | rows/cols clamped to 1-10 | PASS |  |
+| seating chart | bad, duplicate, blank and off-grid seats dropped | PASS | ["A","NNNNN"] |
+| seating chart | name/say/note trimmed to 40/60/120, no newlines | PASS |  |
+| seating chart | seat count capped at 100 | PASS |  |
+| seating chart | export -> import keeps the chart | PASS |  |
+| seating chart | save -> reload keeps the chart | PASS |  |
+| seating chart | chart page follows its period page | PASS |  |
+| seating chart | only periods with seats get a chart page | PASS |  |
+| seating chart | grid is rows x cols (4 x 5 = 20 cells) | PASS |  |
+| seating chart | front of the room marked at the top | PASS |  |
+| seating chart | name, how to say it and note printed in the right cell | PASS |  |
+| seating chart | chart names escaped | PASS |  |
+| seating chart | chart names from every period join the names hidden from the AI | PASS | Jaylen Noah Ava T. Maya L. Will R. Grace S. Siobhan <b>X</b> |
+| seating chart | that name is not in the student list (chart only) | PASS |  |
+| seating chart | chart-only name never reaches the AI prompt (gap + script prompts) | PASS | You are helping a teacher prepare plans for a substitute teacher who has never been in this classroom and cannot ask que |
+| end-of-day note | printed form is in every pack, before the emergency sheet | PASS |  |
+| end-of-day note | form lists each period in the pack with a rating | PASS |  |
+| end-of-day note | form has what got done / didn’t / anything to know | PASS |  |
+| end-of-day note | no contact -> no QR code | PASS |  |
+| end-of-day note | mailto: to the teacher’s own address | PASS |  |
+| end-of-day note | sms: to the teacher’s own number (digits only) | PASS |  |
+| end-of-day note | prefilled body is a blank form with room and date | PASS | End-of-day note, Room 214, Tuesday, December 2 How it went: Done: Not done: Anything I should know: From: |
+| end-of-day note | links stay short enough for a small printed QR (< 300 chars) | PASS | 263/176 |
+| end-of-day note | subject has room and date only | PASS |  |
+| end-of-day note | privacy: no student name or binder notes in either link | PASS |  |
+| end-of-day note | two QR codes, drawn locally, each encoding exactly its link | PASS |  |
+| end-of-day note | says nothing is sent until the sub presses send | PASS |  |
+| end-of-day note | QR codes are inline SVG (no image request) | PASS |  |
+| end-of-day note | email rejected: query injection | PASS |  |
+| end-of-day note | email rejected: header injection | PASS |  |
+| end-of-day note | email rejected: plain text | PASS |  |
+| end-of-day note | email rejected: no TLD | PASS |  |
+| end-of-day note | email rejected: brackets | PASS |  |
+| end-of-day note | email rejected: comma list | PASS |  |
+| end-of-day note | phone: formatting stripped, +country kept | PASS |  |
+| end-of-day note | phone rejected: letters / too short / injection | PASS |  |
+| end-of-day note | bad contact -> no QR, flagged in the gap check | PASS |  |
+| end-of-day note | emergency mode note has a write-in date | PASS |  |
+| school file | lesson bank: duplicates and empty plans dropped | PASS |  |
+| school file | envelope: app/kind/version | PASS |  |
+| school file | has bells, procedures, contacts by role and lessons | PASS |  |
+| school file | never includes students, health notes, pronunciations, charts, periods or the teacher’s own contact | PASS | students,students |
+| school file | a procedure line that names a student is dropped and reported | PASS |  |
+| school file | parse: round trip | PASS |  |
+| school file | parse: a class binder file is refused with a clear message | PASS |  |
+| school file | parse: other JSON / empty / not JSON / newer version refused | PASS |  |
+| school file | merge: fills blank fields | PASS |  |
+| school file | merge: never overwrites the teacher’s own text | PASS |  |
+| school file | merge: contacts matched by role (case-insensitive), blanks filled, new roles added | PASS |  |
+| school file | merge: lessons added to the bank | PASS |  |
+| school file | merge: importing the same file twice changes nothing | PASS |  |
+| school file | merge: periods and student data untouched | PASS |  |
+| school file | bell schedule prints on the schedule page | PASS |  |
+| school file | lesson bank capped at 30 | PASS |  |
+| school file | school file behind the same gate as the binder (lives on binder.html only) | PASS |  |
+| story activity | saved: export -> import keeps the story settings | PASS |  |
+| story activity | minutes per turn: junk cleared | PASS |  |
+| story activity | storyOn only accepts yes | PASS |  |
+| story activity | adds two sheets (sub instructions + story page) only for that period | PASS | 9 |
+| story activity | story sheets follow their period | PASS |  |
+| story activity | groups, timed turns and pass-the-page steps | PASS |  |
+| story activity | timing guide uses the minutes per turn | PASS |  |
+| story activity | blank starter uses a ready-made one | PASS |  |
+| story activity | teacher’s own starter printed (escaped) | PASS |  |
+| story activity | paper only: no devices, accounts, links or QR | PASS |  |
+| story activity | brand-free: no other brand on the story sheets | PASS |  |
+| story activity | reminds students not to use classmates’ real names | PASS |  |
+| story activity | story page has 8 turn boxes | PASS |  |
+| story activity | off by default: base pack unchanged | PASS |  |
 | pages | no Rerum or Rerum product names in site files | PASS |  |
 | pages | no analytics or tracking scripts | PASS |  |
 | pages | binder code makes no network calls | PASS |  |

@@ -129,8 +129,8 @@ const untimed = clone(FIX); untimed.classes[0].start = ''; untimed.classes[0].en
 check(g, 'untimed period goes last', B.buildPack(untimed).periods.slice(-1)[0].id === 'p3');
 const html = B.renderPackHTML(em);
 const sheets = (html.match(/<section class="sheet/g) || []).length;
-check(g, 'pack = cover + schedule + one sheet per period + emergency sheet', sheets === 3 + 3, String(sheets));
-check(g, 'order: cover, schedule, periods, emergency', /sheet cover[\s\S]*sheet schedule[\s\S]*sheet period[\s\S]*sheet emergency/.test(html));
+check(g, 'pack = cover + schedule + one sheet per period + end-of-day note + emergency sheet', sheets === 3 + 4, String(sheets));
+check(g, 'order: cover, schedule, periods, end-of-day note, emergency', /sheet cover[\s\S]*sheet schedule[\s\S]*sheet period[\s\S]*sheet daynote[\s\S]*sheet emergency/.test(html));
 check(g, 'student names printed as typed (local only)', /Maya L\./.test(html) && /Ava T\./.test(html));
 check(g, 'contacts printed by role', /Front office<\/th><td>ext 100/.test(html));
 check(g, 'blank date prints a write-in line', /Date: _+/.test(html));
@@ -163,11 +163,148 @@ check(g, 'today\u2019s lesson wins when typed', /Lesson/.test(B.toToolHandoff(FI
 check(g, 'names to hide = listed names + helpers', ['Jaylen', 'Ava T.', 'Grace S.'].every(x => h.names.split('\n').includes(x)) && !/Reading|Seating/.test(h.names), h.names);
 check(g, 'unknown period -> null', B.toToolHandoff(FIX, 'nope') === null);
 
+
+// ---------- quick-win binder fields ----------
+g = 'quick-win fields';
+const QW = Object.assign(clone(FIX), { rules: 'No one leaves without a pass.', phones: 'Phones in the caddy by the door.', tellYou: '"We always get free time on Fridays." We don\u2019t.', goTo: 'Mr. Okafor, room 216', pronounce: 'Siobhan - shi-VAWN\nNguyen - nwin' });
+check(g, 'new fields exist on an empty binder', ['rules', 'phones', 'tellYou', 'goTo', 'pronounce', 'noteEmail', 'notePhone', 'bells'].every(k => B.emptyBinder()[k] === ''));
+check(g, 'they are optional (not in the gap check)', B.readiness(FIX).length === 0);
+const qwRe = B.importJSON(B.exportJSON(QW));
+check(g, 'export -> import keeps them', qwRe.rules === QW.rules && qwRe.pronounce === QW.pronounce && qwRe.goTo === QW.goTo);
+const qwHtml = B.renderPackHTML(B.buildPack(QW));
+const qwSched = qwHtml.split('sheet schedule')[1].split('</section>')[0];
+check(g, 'printed on the schedule page when filled in', ['Must-follow rules', 'Phone policy', 'Things students may tell you', 'Go-to adult nearby', 'How to say names'].every(x => qwSched.indexOf(x) > -1) && /shi-VAWN/.test(qwSched));
+check(g, 'not printed at all when blank (no "Not provided" noise)', !/Must-follow rules|Phone policy|Go-to adult/.test(B.renderPackHTML(B.buildPack(FIX)).split('sheet schedule')[1].split('</section>')[0]));
+const qwH = B.toToolHandoff(QW, 'p3', '');
+check(g, 'phone policy and rules go to the one-day tool as routines', /Phones: Phones in the caddy/.test(qwH.routines) && /Must-follow rules: No one leaves/.test(qwH.routines));
+check(g, 'pronunciation names join the names hidden from the AI', ['Siobhan', 'Nguyen'].every(n => qwH.names.split('\n').includes(n)), qwH.names);
+
+// ---------- seating chart ----------
+g = 'seating chart';
+const e0 = B.emptyBinder().classes[0].chart;
+check(g, 'each period starts with an empty 5 x 6 chart', e0.rows === 5 && e0.cols === 6 && e0.seats.length === 0);
+const nc = B.normChart({ rows: 99, cols: 0, seats: [{ r: 0, c: 0, name: 'A' }, { r: 0, c: 0, name: 'Dup' }, { r: 20, c: 0, name: 'Off' }, { r: 1, c: 0, name: '   ' }, { r: 'x', c: 1, name: 'Bad' }, null, { r: 2, c: 0, name: 'N'.repeat(90), say: 'S'.repeat(200), note: 'x\ny' }] });
+check(g, 'rows/cols clamped to 1-10', nc.rows === 10 && nc.cols === 1);
+check(g, 'bad, duplicate, blank and off-grid seats dropped', nc.seats.length === 2 && nc.seats[0].name === 'A', JSON.stringify(nc.seats.map(x => x.name.slice(0, 5))));
+check(g, 'name/say/note trimmed to 40/60/120, no newlines', nc.seats[1].name.length === 40 && nc.seats[1].say.length === 60 && nc.seats[1].note === 'x y');
+check(g, 'seat count capped at ' + B.MAX_SEATS, B.normChart({ rows: 10, cols: 10, seats: Array.from({ length: 150 }, (_, i) => ({ r: Math.floor(i / 10) % 10, c: i % 10, name: 'S' + i })) }).seats.length === 100);
+const CH = clone(FIX);
+CH.classes[0].chart = { rows: 4, cols: 5, seats: [{ r: 0, c: 0, name: 'Jaylen', say: 'JAY-len', note: 'front row for the board' }, { r: 1, c: 2, name: 'Siobhan', say: 'shi-VAWN', note: '' }, { r: 3, c: 4, name: '<b>X</b>', say: '', note: '' }] };
+const chRe = B.importJSON(B.exportJSON(CH));
+check(g, 'export -> import keeps the chart', JSON.stringify(chRe.classes[0].chart) === JSON.stringify(B.normChart(CH.classes[0].chart)));
+const chst = memStore(); B.save(chst, CH);
+check(g, 'save -> reload keeps the chart', B.load(chst).classes[0].chart.seats.length === 3);
+const chHtml = B.renderPackHTML(B.buildPack(CH, { mode: 'emergency' }));
+check(g, 'chart page follows its period page', /Period 3 - Math 7<\/h2>[\s\S]*?<\/section><section class="sheet seating">/.test(chHtml));
+check(g, 'only periods with seats get a chart page', (chHtml.match(/sheet seating/g) || []).length === 1);
+const grid = chHtml.split('sheet seating')[1].split('</table>')[0];
+check(g, 'grid is rows x cols (4 x 5 = 20 cells)', (grid.match(/<td/g) || []).length === 20 && (grid.match(/<tr>/g) || []).length === 4);
+check(g, 'front of the room marked at the top', /Front of the room/.test(chHtml.split('sheet seating')[1].split('<table')[0]));
+check(g, 'name, how to say it and note printed in the right cell', /<tr><td class="seat"><div class="seat-in"><strong>Jaylen<\/strong><span class="say">say \u201cJAY-len\u201d<\/span><span class="snote">front row for the board<\/span>/.test(grid));
+check(g, 'chart names escaped', /&lt;b&gt;X&lt;\/b&gt;/.test(grid) && !/<b>X<\/b>/.test(grid));
+const chH = B.toToolHandoff(CH, 'p5', '');
+check(g, 'chart names from every period join the names hidden from the AI', ['Siobhan', 'Jaylen'].every(n => chH.names.split('\n').includes(n)), chH.names);
+// Masking end to end: a name that exists ONLY on a seating chart must never reach the AI prompt.
+const CH2 = clone(CH); CH2.classes[0].seating = 'Siobhan sits by the door and helps with the projector.'; CH2.classes[0].helpers = 'Ask Siobhan first.';
+const h2 = B.toToolHandoff(CH2, 'p3', 'Lesson: Siobhan hands out the worksheets.');
+check(g, 'that name is not in the student list (chart only)', !/Siobhan/.test(CH2.students));
+const nm2 = C.buildNameMap(C.parseNameList(h2.names));
+const mk = (t) => C.maskNames(t, nm2).text;
+const info2 = { className: h2.title, periods: h2.periods, routines: mk(h2.routines), locations: mk(h2.locations), helpers: mk(h2.helpers), emergency: mk(h2.emergency) };
+const prompt2 = C.buildGapPrompt(mk(h2.plan), info2) + C.buildScriptPrompt(mk(h2.plan), info2, []);
+check(g, 'chart-only name never reaches the AI prompt (gap + script prompts)', !/Siobhan/i.test(prompt2) && /\[STUDENT_\d+\]/.test(prompt2), prompt2.slice(0, 200));
+
+// ---------- end-of-day note ----------
+g = 'end-of-day note';
+const noNote = B.renderPackHTML(B.buildPack(FIX, { mode: 'emergency' }));
+const ns = noNote.split('sheet daynote')[1].split('</section>')[0];
+check(g, 'printed form is in every pack, before the emergency sheet', /sheet daynote[\s\S]*sheet emergency/.test(noNote) && /End-of-day note for Ms\. Rivera/.test(ns));
+check(g, 'form lists each period in the pack with a rating', ['Period 1 - Math 6', 'Period 3 - Math 7', 'Period 5 - Advisory'].every(x => ns.indexOf(x) > -1) && /Great[\s\S]*OK[\s\S]*Rough/.test(ns));
+check(g, 'form has what got done / didn\u2019t / anything to know', /What got done/.test(ns) && /What didn\u2019t get done/.test(ns) && /Anything I should know/.test(ns));
+check(g, 'no contact -> no QR code', !/<svg/.test(ns));
+const NT = Object.assign(clone(FIX), { noteEmail: 'ms.rivera@lincoln.example.org', notePhone: '(555) 201-4477' });
+const ntm = B.buildPack(NT, { mode: 'day', date: 'Tuesday, December 2', periods: ['p3'] });
+const nth = B.renderPackHTML(ntm);
+const nsh = nth.split('sheet daynote')[1].split('</section>')[0];
+check(g, 'mailto: to the teacher\u2019s own address', ntm.note.mailto.indexOf('mailto:ms.rivera@lincoln.example.org?subject=') === 0);
+check(g, 'sms: to the teacher\u2019s own number (digits only)', ntm.note.sms.indexOf('sms:5552014477?&body=') === 0);
+const body = decodeURIComponent(ntm.note.mailto.split('&body=')[1]);
+check(g, 'prefilled body is a blank form with room and date', /^End-of-day note, Room 214, Tuesday, December 2\n/.test(body) && /How it went:/.test(body) && /\nFrom:$/.test(body), body);
+check(g, 'links stay short enough for a small printed QR (< 300 chars)', ntm.note.mailto.length < 300 && ntm.note.sms.length < 220, ntm.note.mailto.length + '/' + ntm.note.sms.length);
+check(g, 'subject has room and date only', decodeURIComponent(ntm.note.mailto.split('subject=')[1].split('&')[0]) === 'Sub note: Room 214, Tuesday, December 2');
+const noteSecrets = C.parseNameList(FIX.students).concat(['Jaylen', 'Maya', 'Ava', 'EpiPen', 'Door 6', 'Okafor', 'Lincoln Middle']);
+check(g, 'privacy: no student name or binder notes in either link', [ntm.note.mailto, ntm.note.sms].every(u => noteSecrets.every(x => decodeURIComponent(u).toLowerCase().indexOf(x.toLowerCase()) < 0)));
+check(g, 'two QR codes, drawn locally, each encoding exactly its link', (nsh.match(/<svg class="qr"/g) || []).length === 2 && nsh.indexOf(B.qrSVG(ntm.note.mailto, 'QR code: email the note')) > -1 && nsh.indexOf(B.qrSVG(ntm.note.sms, 'QR code: text the note')) > -1);
+check(g, 'says nothing is sent until the sub presses send', /Nothing is sent until you press send/.test(nsh));
+check(g, 'QR codes are inline SVG (no image request)', !/<img|src=/.test(nsh));
+[['a@b.com?bcc=x@y.com', 'query injection'], ['a@b.com\nBcc: x@y.com', 'header injection'], ['not an email', 'plain text'], ['a@b', 'no TLD'], ['<a@b.com>', 'brackets'], ['a,b@c.com', 'comma list']].forEach(([v, why]) => check(g, 'email rejected: ' + why, B.cleanEmail(v) === ''));
+check(g, 'phone: formatting stripped, +country kept', B.cleanPhone('+1 (555) 201-4477') === '+15552014477' && B.cleanPhone('555.201.4477') === '5552014477');
+check(g, 'phone rejected: letters / too short / injection', B.cleanPhone('call me') === '' && B.cleanPhone('123') === '' && B.cleanPhone('5552014477?body=hi') === '');
+const badN = Object.assign(clone(FIX), { noteEmail: 'oops', notePhone: 'abc' });
+check(g, 'bad contact -> no QR, flagged in the gap check', !/<svg/.test(B.renderPackHTML(B.buildPack(badN))) && B.readiness(badN).filter(i => /noteEmail|notePhone/.test(i.field)).length === 2);
+check(g, 'emergency mode note has a write-in date', /<th>Date<\/th><td><\/td>/.test(ns));
+fs.writeFileSync(path.join(outDir, 'pack-note.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + nth + '</main>');
+
+// ---------- shared school file (Building plan) ----------
+g = 'school file';
+const SCB = Object.assign(clone(FIX), { bells: 'P1 8:00-8:50\nP3 10:40-11:30', phones: 'Phones away in class.', rules: 'Walk in the halls.\nJaylen may leave 5 minutes early for the bus.', pronounce: 'Siobhan - shi-VAWN', noteEmail: 'ms.rivera@lincoln.example.org',
+  lessonBank: [{ title: 'Reading response', plan: 'Read 20 minutes.\nWrite 5 sentences.' }, { title: 'Reading response', plan: 'Read 20 minutes.\nWrite 5 sentences.' }, { title: 'Math review', plan: '' }] });
+SCB.classes[0].chart = { rows: 2, cols: 2, seats: [{ r: 0, c: 0, name: 'Siobhan' }] };
+check(g, 'lesson bank: duplicates and empty plans dropped', B.normalizeBinder(SCB).lessonBank.length === 1);
+const sf = B.buildSchoolFile(SCB, new Date('2026-11-27T12:00:00Z'));
+const sfj = JSON.parse(sf.json);
+check(g, 'envelope: app/kind/version', sfj.app === 'sub-ready' && sfj.kind === 'school-file' && sfj.version === 1 && sfj.exportedAt === '2026-11-27T12:00:00.000Z');
+check(g, 'has bells, procedures, contacts by role and lessons', /P1 8:00/.test(sfj.school.bells) && /Door 6/.test(sfj.school.procedures.emergency) && sfj.school.contacts.length === 3 && sfj.school.lessons.length === 1 && sfj.school.name === 'Lincoln Middle School');
+const sfText = sf.json.toLowerCase();
+check(g, 'never includes students, health notes, pronunciations, charts, periods or the teacher\u2019s own contact', !/epipen|ava t|maya|will r\.|grace|noah|siobhan|shi-vawn|ms\.rivera@|seating|any-day folder|"classes"|"students"|"health"/.test(sfText), (sfText.match(/epipen|maya|siobhan|classes|students|health/g) || []).join(','));
+check(g, 'a procedure line that names a student is dropped and reported', /Walk in the halls/.test(sfj.school.procedures.rules) && !/Jaylen/.test(sf.json) && sf.removed.some(r => /rules/.test(r) && /Jaylen/.test(r)));
+check(g, 'parse: round trip', JSON.stringify(B.parseSchoolFile(sf.json).procedures) === JSON.stringify(sfj.school.procedures));
+check(g, 'parse: a class binder file is refused with a clear message', throws(() => B.parseSchoolFile(B.exportJSON(FIX)), /class binder, not a school file/));
+check(g, 'parse: other JSON / empty / not JSON / newer version refused', throws(() => B.parseSchoolFile('{"a":1}'), /isn.t a Sub-Ready school file/) && throws(() => B.parseSchoolFile(''), /empty/) && throws(() => B.parseSchoolFile('nope'), /valid JSON/) && throws(() => B.parseSchoolFile('{"app":"sub-ready","kind":"school-file","version":9,"school":{}}'), /newer version/));
+const fresh = B.emptyBinder(); fresh.teacher = 'Mr. Lee'; fresh.bathroom = 'Mr. Lee\u2019s own pass rule.'; fresh.contacts = [{ role: 'front office', contact: '' }, { role: 'Coach', contact: 'gym' }];
+const mg = B.mergeSchoolFile(fresh, B.parseSchoolFile(sf.json));
+check(g, 'merge: fills blank fields', mg.binder.school === 'Lincoln Middle School' && /Door 6/.test(mg.binder.emergency) && /P1 8:00/.test(mg.binder.bells) && mg.report.filled.indexOf('Emergency procedures') > -1);
+check(g, 'merge: never overwrites the teacher\u2019s own text', mg.binder.bathroom === 'Mr. Lee\u2019s own pass rule.' && mg.report.kept.indexOf('Bathroom / hall pass') > -1 && mg.binder.teacher === 'Mr. Lee');
+check(g, 'merge: contacts matched by role (case-insensitive), blanks filled, new roles added', mg.binder.contacts.length === 4 && mg.binder.contacts[0].contact === 'ext 100' && mg.binder.contacts[1].contact === 'gym' && mg.report.contactsAdded === 2 && mg.report.contactsFilled === 1);
+check(g, 'merge: lessons added to the bank', mg.binder.lessonBank.length === 1 && mg.report.lessonsAdded === 1);
+const mg2 = B.mergeSchoolFile(mg.binder, B.parseSchoolFile(sf.json));
+check(g, 'merge: importing the same file twice changes nothing', JSON.stringify(mg2.binder) === JSON.stringify(mg.binder) && mg2.report.filled.length === 0 && mg2.report.lessonsAdded === 0 && mg2.report.contactsAdded === 0);
+check(g, 'merge: periods and student data untouched', JSON.stringify(B.mergeSchoolFile(FIX, B.parseSchoolFile(sf.json)).binder.classes) === JSON.stringify(B.normalizeBinder(FIX).classes));
+check(g, 'bell schedule prints on the schedule page', /School bell schedule/.test(B.renderPackHTML(B.buildPack(mg.binder)).split('sheet schedule')[1].split('</section>')[0]));
+check(g, 'lesson bank capped at 30', B.normalizeBinder({ lessonBank: Array.from({ length: 50 }, (_, i) => ({ title: 'L' + i, plan: 'p' + i })), classes: [] }).lessonBank.length === 30);
+check(g, 'school file behind the same gate as the binder (lives on binder.html only)', /id="schoolSection"/.test(fs.readFileSync(path.join(root, 'binder.html'), 'utf8')) && !/schoolFile|schoolExport/.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8')));
+
+// ---------- paper pass-the-page story activity (brand-free) ----------
+g = 'story activity';
+const ST = clone(FIX); Object.assign(ST.classes[0], { storyOn: 'yes', storyPrompt: '', storyMinutes: '4' });
+const stRe = B.importJSON(B.exportJSON(ST));
+check(g, 'saved: export -> import keeps the story settings', stRe.classes[0].storyOn === 'yes' && stRe.classes[0].storyMinutes === '4');
+check(g, 'minutes per turn: junk cleared', B.normalizeBinder({ classes: [{ storyMinutes: '99' }, { storyMinutes: 'abc' }, { storyMinutes: '0' }] }).classes.every(c => c.storyMinutes === ''));
+check(g, 'storyOn only accepts yes', B.normalizeBinder({ classes: [{ storyOn: 'maybe' }] }).classes[0].storyOn === '');
+const stHtml = B.renderPackHTML(B.buildPack(ST, { mode: 'emergency' }));
+const stSheets = (stHtml.match(/<section class="sheet/g) || []).length;
+check(g, 'adds two sheets (sub instructions + story page) only for that period', stSheets === 7 + 2, String(stSheets));
+check(g, 'story sheets follow their period', /Period 3 - Math 7<\/h2>[\s\S]*?<\/section><section class="sheet story">[\s\S]*?<section class="sheet story-page">/.test(stHtml));
+check(g, 'groups, timed turns and pass-the-page steps', /groups of 3 or 4/i.test(stHtml) && /Every 4 minutes, say \u201cPass the page.\u201d/.test(stHtml) && /Write the ending/.test(stHtml));
+check(g, 'timing guide uses the minutes per turn', /8 turns \u00d7 4 min = about 32 min/.test(stHtml));
+check(g, 'blank starter uses a ready-made one', B.STORY_STARTERS.some(x => stHtml.indexOf(x) > -1));
+const ST2 = clone(ST); ST2.classes[0].storyPrompt = 'The <b>lights</b> went out.';
+check(g, 'teacher\u2019s own starter printed (escaped)', /The &lt;b&gt;lights&lt;\/b&gt; went out\./.test(B.renderPackHTML(B.buildPack(ST2))));
+const storyPart = stHtml.split('<section class="sheet story">')[1].split('<section class="sheet daynote')[0];
+check(g, 'paper only: no devices, accounts, links or QR', /no devices or accounts/.test(stHtml) && !/<a |<svg|http/.test(storyPart));
+check(g, 'brand-free: no other brand on the story sheets', !/scripto|rerum/i.test(stHtml));
+check(g, 'reminds students not to use classmates\u2019 real names', /classmates\u2019 real names/.test(stHtml));
+check(g, 'story page has 8 turn boxes', (stHtml.match(/class="turn"/g) || []).length === 8);
+check(g, 'off by default: base pack unchanged', !/sheet story/.test(B.renderPackHTML(B.buildPack(FIX))));
+fs.writeFileSync(path.join(outDir, 'pack-story.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + stHtml + '</main>');
+const ALL = Object.assign(clone(QW), { noteEmail: 'ms.rivera@lincoln.example.org', bells: 'P1 8:00-8:50' }); ALL.classes[0].chart = CH.classes[0].chart; Object.assign(ALL.classes[0], { storyOn: 'yes' });
+fs.writeFileSync(path.join(outDir, 'pack-all.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + B.renderPackHTML(B.buildPack(ALL)) + '</main>');
+
 // ---------- pages: honesty & privacy ----------
 g = 'pages';
-const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'styles.css', 'README.md'];
+const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'js/vendor/qrcode.js', 'styles.css', 'README.md'];
 const all = files.map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
-check(g, 'no Rerum or Rerum product names in site files', !/rerum|scripto|phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu/i.test(all));
+check(g, 'no Rerum or Rerum product names in site files', !/rerum|\bscripto|phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu/i.test(all));
 check(g, 'no analytics or tracking scripts', !/google-analytics|gtag\(|googletagmanager|plausible|mixpanel|segment\.com|hotjar|clarity\.ms/i.test(all));
 const binderJs = fs.readFileSync(path.join(root, 'js/binder.js'), 'utf8') + fs.readFileSync(path.join(root, 'js/binder-core.js'), 'utf8');
 check(g, 'binder code makes no network calls', !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.sendBeacon/.test(binderJs));

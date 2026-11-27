@@ -6,6 +6,7 @@
 <title>Class binder (free early access) · Sub-Ready</title>
 <meta name="description" content="Save your class once, keep a no-prep emergency sub plan ready, and print a front-office pack. Saved only in your browser.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e8743b'/><path d='M18 34l9 9 19-21' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<meta name="theme-color" content="#eef2fb">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="binder-page">
@@ -27,6 +28,19 @@
       To move it to another computer, use <em>Export</em> and <em>Import</em>. The exported file holds your notes and any student first names you typed, so keep it private.
       Clearing your browser data deletes the binder unless you exported it.
     </div>
+    <aside class="whatsnew" id="whatsNew" aria-labelledby="wnTitle">
+      <p class="wn-lead"><strong id="wnTitle">Sub-Ready is actively being built &mdash; new features land regularly.</strong></p>
+      <details><summary>What&rsquo;s new</summary>
+        <ul>
+          <li>The sub&rsquo;s end-of-day note: a printed form in every pack, plus a QR code that opens a ready-to-send email or text to you.</li>
+          <li>A seating chart for each period: click or drag to place, with how to say each name. Prints on one page.</li>
+          <li>A shared school file: bell schedule, procedures, contacts and an any-day lesson bank that each teacher imports.</li>
+          <li>Pass-the-page story: a paper writing activity for the sub pack. No devices or accounts.</li>
+          <li>New fields: phone policy, must-follow rules, a go-to adult nearby, and things students may tell you.</li>
+          <li>A cleaner new look.</li>
+        </ul>
+      </details>
+    </aside>
     <p class="hint" id="earlyNote">These features are free during early access. Later they&rsquo;ll be part of the Teacher plan ($5/month) and the Building plan ($49/month). Those plans aren&rsquo;t on sale yet, and nothing here asks for payment.</p>
   </div>
 
@@ -63,7 +77,24 @@
       </div>
       <label for="f-students">Student first names used in these notes</label>
       <textarea id="f-students" data-shared="students" rows="2" placeholder="Jaylen&#10;Maya L.&#10;Will R."></textarea>
-      <p class="hint">One per line. When you send a period to the one-day tool, these names are hidden before any AI step. The binder itself never leaves this browser.</p>
+      <p class="hint">One per line. When you send a period to the one-day tool, these names (and every name on your seating charts and pronunciation list) are hidden before any AI step. The binder itself never leaves this browser.</p>
+      <h3>Things a sub always asks</h3>
+      <p class="hint">Optional. Printed on the schedule page only when filled in.</p>
+      <div class="grid2">
+        <div><label for="f-rules">Must-follow rules</label><textarea id="f-rules" data-shared="rules" rows="3" placeholder="No one leaves without a pass. Lab goggles on at all times in the lab."></textarea></div>
+        <div><label for="f-phones">Phone policy</label><textarea id="f-phones" data-shared="phones" rows="3" placeholder="Phones in the caddy by the door during class. Out only at lunch."></textarea></div>
+        <div><label for="f-tellYou">Things students may tell you (that aren&rsquo;t true)</label><textarea id="f-tellYou" data-shared="tellYou" rows="3" placeholder="&ldquo;We always get free time on Fridays.&rdquo; We don&rsquo;t."></textarea></div>
+        <div><label for="f-goTo">Go-to adult nearby</label><textarea id="f-goTo" data-shared="goTo" rows="3" placeholder="Mr. Okafor, room 216, next door. He knows this class."></textarea></div>
+      </div>
+      <label for="f-pronounce">Name pronunciation</label>
+      <textarea id="f-pronounce" data-shared="pronounce" rows="3" placeholder="Siobhan - shi-VAWN&#10;Nguyen - nwin"></textarea>
+      <p class="hint">One per line: name, a dash, then how to say it. You can also add this per seat on a seating chart.</p>
+      <h3>The sub&rsquo;s end-of-day note</h3>
+      <p class="hint">Every pack ends with a short form the sub fills in for you. Add your own email or mobile number and the form also prints a QR code that opens a ready-to-send email or text to you on the sub&rsquo;s phone. Sub-Ready never sends anything itself.</p>
+      <div class="grid2">
+        <div><label for="f-noteEmail">Your email for the note</label><input id="f-noteEmail" data-shared="noteEmail" type="email" autocomplete="off" placeholder="you@school.org"></div>
+        <div><label for="f-notePhone">Or a mobile number to text</label><input id="f-notePhone" data-shared="notePhone" type="tel" autocomplete="off" placeholder="555-201-4477"></div>
+      </div>
       <h3>Contacts by role</h3>
       <p class="hint">Roles and extensions, not personal phone numbers. Never write a password here.</p>
       <div id="contacts"></div>
@@ -97,6 +128,25 @@
       <div id="dayPeriods"></div>
       <button class="btn" id="dayBtn" type="button">Build today&rsquo;s print pack</button>
     </section>
+
+    <section class="card" id="schoolSection">
+      <h2><span class="num">6</span>School file <span class="badge">Building plan &middot; free early access</span></h2>
+      <p class="hint">One person (the office or a team lead) keeps the building&rsquo;s bell schedule, procedures, contacts by role and a bank of any-day lessons in one file, then shares it. Each teacher imports it here. It fills in what&rsquo;s blank in your binder and never overwrites what you wrote. There&rsquo;s no live sync: import again when the school updates the file. A school file never contains student information.</p>
+      <label for="f-bells">School bell schedule</label>
+      <textarea id="f-bells" data-shared="bells" rows="3" placeholder="P1 8:00-8:50&#10;P2 8:55-9:45&#10;Lunch 11:30-12:05"></textarea>
+      <h3>Any-day lesson bank</h3>
+      <div id="lessonBank"></div>
+      <div class="grid2 add-lesson">
+        <div><label for="lessonTitle">Lesson title</label><input id="lessonTitle" placeholder="Reading response (any grade)"></div>
+        <div><label for="lessonPlan">Steps</label><textarea id="lessonPlan" rows="3" placeholder="Read any chapter book for 20 minutes.&#10;Write 5 sentences about what happened.&#10;Collect in the tray."></textarea></div>
+      </div>
+      <button class="btn ghost small" id="addLesson" type="button">+ Add to the lesson bank</button>
+      <div class="toolbar">
+        <label class="btn small filebtn">Import a school file<input type="file" id="schoolFile" accept="application/json,.json" hidden></label>
+        <button class="btn ghost small" id="schoolExport" type="button">Export a school file from this binder</button>
+      </div>
+      <p id="schoolMsg" class="status-line" role="status" hidden></p>
+    </section>
   </div>
 
   <section id="packWrap" hidden>
@@ -116,6 +166,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
+<script src="js/vendor/qrcode.js"></script>
 <script src="js/binder-core.js"></script>
 <script src="js/binder.js"></script>
 </body>

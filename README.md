@@ -19,6 +19,18 @@ A free, static web tool for teachers: paste rough sub-plan notes, answer 5–8 t
 
 `compare.html` lists only facts each competitor publishes, with a source link and the date checked.
 
+## Newer binder features (free early access)
+
+- **The sub's end-of-day note:** every print pack ends with a short form for the sub. If the teacher adds their own email or mobile number, the form also prints QR codes (drawn on the device with `js/vendor/qrcode.js`, MIT) that open a prefilled `mailto:` or `sms:` addressed to the teacher. The prefilled text has only the room and date, never student names. Sub-Ready sends nothing.
+- **Seating chart per period:** a grid up to 10 x 10. Click a name and then a seat, or drag names onto seats (and seats onto seats to move). Each seat has a first name, how to say it and a short note. Saved only in this browser, printed on one page after that period. Every chart name and pronunciation-list name is added to the names hidden before any AI step.
+- **Quick-win fields:** must-follow rules, phone policy, things students may tell you, a go-to adult nearby, name pronunciation. Printed on the schedule page only when filled in.
+- **Shared school file (Building plan):** export a school-wide JSON (bell schedule, procedures, contacts by role, any-day lesson bank) and import it into each teacher's binder. It fills blanks only, never overwrites a teacher's own text, and never contains student data (lines that mention a binder name are dropped on export). No live sync.
+- **Pass-the-page story:** a paper writing activity (groups, timed turns, pass the page) added to a period's pack. No devices or accounts.
+
+## Look
+
+Frosted-glass design in plain CSS: translucent panels with `backdrop-filter` blur and saturate, layered gradients, system font stack, no outside fonts or CDNs. Solid fallbacks for browsers without `backdrop-filter` and for `prefers-reduced-transparency`; no motion with `prefers-reduced-motion`; print is plain black on white. `node tests/run-design-tests.js` checks AA contrast of the text colours against the worst-case backdrop.
+
 ## How the AI step runs
 
 1. **On-device (Chrome built-in Prompt API / Gemini Nano).** The app feature-detects `'LanguageModel' in self`, then calls `LanguageModel.availability({expectedInputs:[{type:'text',languages:['en']}], expectedOutputs:[{type:'text',languages:['en']}]})`. The result is one of `available`, `downloadable`, `downloading` or `unavailable`. The session is created with `LanguageModel.create(...)` (with a download `monitor`) from a button click, and `session.prompt(text, { responseConstraint: jsonSchema })` returns the JSON.
@@ -34,6 +46,7 @@ styles.css        warm, mobile-readable design + print stylesheet
 binder.html       class binder, emergency plan, multi-period plan, print pack
 compare.html      sourced comparison with other sub-plan tools
 js/config.js      PRO_URL = '' and EARLY_ACCESS = true (the single paid/free switch)
+js/vendor/qrcode.js  MIT QR code generator (Kazuhiko Arase), used for the end-of-day note QR codes
 js/binder-core.js binder logic: validation, save/load, export/import, gap check, print pack
 js/binder.js      binder UI
 js/core.js        pure logic: masking, lint, prompts, JSON repair, time math, grounding, render
@@ -47,6 +60,7 @@ screens/          screenshots
 ```bash
 node tests/run-tests.js              # pipeline + edge cases -> tests/RESULTS.md, tests/out/*.html
 node tests/run-binder-tests.js       # binder: save/reload, export/import, flag, gap check, print pack -> tests/BINDER-RESULTS.md
+node tests/run-design-tests.js       # frosted-glass look: AA contrast, fallbacks, reduced motion, plain print, honest what's-new -> tests/DESIGN-RESULTS.md
 python3 tests/e2e_binder.py          # binder in a real browser, incl. print-to-PDF page count
 python3 tests/e2e_screens.py         # browser E2E on a local server -> screens/*.png
 python3 tests/e2e_screens.py https://<live-url>/ live-   # same checks against a deployed URL

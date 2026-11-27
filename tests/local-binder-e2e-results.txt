@@ -11,7 +11,7 @@ PASS after reload: contacts kept
 PASS saved in localStorage under subready.binder.v1
 PASS gap check: complete binder shows nothing missing -- Nothing obvious is missing. A stranger should be able to run this.
 PASS gap check: vague any-day plan flagged -- 2 things a sub would still need. Blank items print as “Not provided — ask the office.”Period 3 - Math 7Any-day plan, "Do the usual warm-up": "the usual" assumes the sub already knows your routine.Any-
-PASS emergency plan: 6 sheets (cover, schedule, 3 periods, emergency) -- 6
+PASS emergency plan: 7 sheets (cover, schedule, 3 periods, end-of-day note, emergency) -- 7
 PASS emergency plan: periods in time order -- ['Period 1 - Math 6', 'Period 3 - Math 7', 'Period 5 - Advisory']
 PASS emergency plan: no "before you print" warning when complete
 PASS print: editor hidden
@@ -19,12 +19,13 @@ PASS print: site header hidden
 PASS print: pack visible
 PASS print: each sheet breaks to a new page
 PASS print: last sheet adds no blank page
-PASS print PDF: one page per sheet (6 pages) -- 6
+PASS print PDF: one page per sheet (7 pages) -- 7
 PASS print PDF: page 1 is the cover
 PASS print PDF: page 2 is the schedule
+PASS print PDF: page 6 is the end-of-day note
 PASS print PDF: last page is the emergency sheet
 PASS print PDF: no editor text leaked
-PASS day plan: unticked period left out (5 sheets) -- 5
+PASS day plan: unticked period left out (6 sheets) -- 6
 PASS day plan: today’s lesson used
 PASS day plan: other period falls back to any-day plan
 PASS day plan: date on the cover
@@ -53,6 +54,67 @@ PASS landing: binder labeled free early access
 PASS landing: plans coming soon, button has no link
 PASS flag off: binder locked behind the plan
 PASS flag off, no PRO_URL: "Coming soon", no link
+PASS design: cards are frosted glass (backdrop-filter blur) -- blur(22px) saturate(1.8)
+PASS design: system font stack
+PASS app says it is actively being built
+PASS chart: 4 x 5 grid shown
+PASS chart: click a name, then a seat, places it
+PASS chart: drag a name onto a seat places it -- {(0, 0): {'r': 0, 'c': 0, 'name': 'Jaylen', 'say': '', 'note': ''}, (1, 2): {'r': 1, 'c': 2, 'name': 'Noah', 'say': '', 'note': ''}}
+PASS chart: drag a seated student to move them
+PASS chart: pronunciation and note saved on the seat
+PASS chart: placed names leave the name list
+PASS school: lesson added to the bank
+PASS after reload: chart kept (3 seats, 4 x 5)
+PASS after reload: quick-win fields kept
+PASS after reload: story activity and lesson bank kept
+PASS pack: cover, schedule, 3 periods, seating, 2 story sheets, note, emergency (10 sheets) -- 10
+PASS pack: seating chart page has names and how to say them
+PASS pack: quick-win fields printed on the schedule page
+PASS note: two QR codes (email + text)
+PASS note: links go to the teacher’s own address and number -- ['mailto:ms.rivera@lincoln.example.org?subject=Sub%20note%3A%20Room%20214&body=End-of-day%20note%2C%20Room%20214%0AHow%20it%20went%3A%0ADone%3A%0ANot%20done%3A%0AAnything%20I%20should%20know%3A%0AFrom
+PASS note: no student name or binder notes in the links
+PASS note: email QR scans to exactly its prefilled link -- mailto:ms.rivera@lincoln.example.org?subject=Sub%20note%3A%2
+PASS note: text QR scans to exactly its prefilled link -- sms:5552014477?&body=End-of-day%20note%2C%20Room%20214%0AHow
+PASS print: frosted glass switched off (no backdrop-filter)
+PASS print: plain white page
+PASS print PDF: one page per sheet, seating chart on one page (10) -- 10
+PASS print PDF: seating chart page shows every seated name
+PASS print PDF: end-of-day note page
+PASS print PDF: pass-the-page story sheets
+PASS print PDF: a full 10 x 10 chart with long notes still fits one page -- 6 pages for 6 sheets
+PASS school file: downloaded as sub-ready-school-file.json
+PASS school file: no student names, health notes, charts or teacher contact
+PASS school file: has bells, procedures, contacts and the lesson
+PASS school import: merged message lists what was filled and kept -- Merged sub-ready-school-file.json: filled School name, Bell schedule, When the sub arrives, Emergency procedures, Dismissal, Phone policy, Must-follow rules, Before you leave; 3 contacts; 1 lesson add
+PASS school import: blanks filled, own text kept
+PASS school import: contacts and lesson bank arrived
+PASS school import: a bank lesson becomes a period’s any-day plan
+PASS school import: a binder file is refused clearly
+PASS hand-off: seating-chart and pronunciation names join the hidden list -- Jaylen
+Noah
+Ava T.
+Maya L.
+Will R.
+Grace S.
+Nguyen
+Siobhan
+Student00
+Student01
+Student02
+Student03
+Student04
+Student05
+Student06
+Student07
+Student08
+Student09
+Student10
+Student11
+Student12
+Student13
+S
+PASS hand-off: a chart-only name never reaches the AI prompt
+PASS new features: no requests to any other server
 PASS compare page loads (HTTP 200)
 PASS compare page: 6 rows
 PASS compare page: 5 source links

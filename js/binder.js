@@ -69,9 +69,12 @@
     supplies: ['textarea', 'Textbooks: shelf under the window. Pencils: blue cup on my desk.'],
     anyDay: ['textarea', 'Warm-up: write 3 sentences about the board prompt.\nRead pages from the green any-day folder (top drawer), answer questions 1-5.\nCollect work in the tray.']
   };
+  var openCards = {};
   function renderClasses() {
+    Array.prototype.forEach.call(document.querySelectorAll('.period-card'), function (d) { openCards[d.getAttribute('data-id')] = d.open; });
     $('classes').innerHTML = binder.classes.map(function (c, i) {
-      var h = '<details class="period-card" data-id="' + esc(c.id) + '"' + (i === 0 || binder.classes.length < 3 ? ' open' : '') + '><summary>' + esc(c.label || ('Period ' + (i + 1))) +
+      var isOpen = c.id in openCards ? openCards[c.id] : (i === 0 || binder.classes.length < 3 || i === binder.classes.length - 1);
+      var h = '<details class="period-card" data-id="' + esc(c.id) + '"' + (isOpen ? ' open' : '') + '><summary>' + esc(c.label || ('Period ' + (i + 1))) +
         '<span class="sum-time"> ' + esc([c.start, c.end].filter(Boolean).join('\u2013')) + '</span></summary><div class="grid4">';
       ['label', 'start', 'end', 'location'].forEach(function (k) {
         var f = B.CLASS_FIELDS.filter(function (x) { return x[0] === k; })[0];
@@ -83,6 +86,7 @@
         h += '<div><label for="' + k + '-' + esc(c.id) + '">' + esc(f[1]) + '</label><textarea rows="3" id="' + k + '-' + esc(c.id) + '" data-k="' + k + '" placeholder="' + esc(FIELD_UI[k][1]) + '">' + esc(c[k]) + '</textarea></div>';
       });
       h += '</div><label for="anyDay-' + esc(c.id) + '">Any-day plan (no-prep work for a surprise absence)</label><textarea rows="5" id="anyDay-' + esc(c.id) + '" data-k="anyDay" placeholder="' + esc(FIELD_UI.anyDay[1]) + '">' + esc(c.anyDay) + '</textarea>';
+      h += chartHTML(c) + storyFieldsHTML(c);
       h += '<div class="row-actions"><button class="btn ghost small" type="button" data-dup="' + esc(c.id) + '">Duplicate</button>' +
         (binder.classes.length > 1 ? '<button class="btn ghost small danger" type="button" data-del="' + esc(c.id) + '">Remove period</button>' : '') + '</div></details>';
       return h;
@@ -90,6 +94,132 @@
     $('addClass').disabled = binder.classes.length >= B.MAX_CLASSES;
     renderDay();
   }
+  function storyFieldsHTML(c) {
+    var id = esc(c.id);
+    return '<fieldset class="extra story-fields"><legend>Paper story activity (optional)</legend>' +
+      '<label class="check"><input type="checkbox" id="storyOn-' + id + '" data-k="storyOn"' + (c.storyOn === 'yes' ? ' checked' : '') + '> Add the pass-the-page story activity (paper only: groups, timed turns, no devices or accounts)</label>' +
+      '<div class="grid2"><div><label for="storyPrompt-' + id + '">Story starter (optional)</label><input id="storyPrompt-' + id + '" data-k="storyPrompt" value="' + esc(c.storyPrompt) + '" placeholder="Leave blank for a ready-made starter"></div>' +
+      '<div><label for="storyMinutes-' + id + '">Minutes per turn</label><input id="storyMinutes-' + id + '" data-k="storyMinutes" inputmode="numeric" value="' + esc(c.storyMinutes) + '" placeholder="3"></div></div></fieldset>';
+  }
+
+  // ---------- seating chart builder (click or drag to place; saved only in this browser) ----------
+  var chartUI = {};
+  function ui(id) { return chartUI[id] || (chartUI[id] = { chip: null, seat: null, open: false }); }
+  function seatAt(c, key) { var rc = key.split(','); return c.chart.seats.filter(function (st) { return st.r === +rc[0] && st.c === +rc[1]; })[0] || null; }
+  function cellInner(st) { return st ? '<b>' + esc(st.name) + '</b>' + (st.say ? '<small>' + esc(st.say) + '</small>' : '') : '<span class="plus" aria-hidden="true">+</span>'; }
+  function cellLabel(r, cc, st) { return 'Row ' + (r + 1) + ', seat ' + (cc + 1) + ': ' + (st ? st.name : 'empty'); }
+  function chartHTML(c) {
+    var ch = c.chart, u = ui(c.id), id = esc(c.id);
+    var placed = {}; ch.seats.forEach(function (st) { placed[st.name.toLowerCase()] = 1; });
+    var unplaced = C.parseNameList(binder.students).filter(function (n) { return !placed[n.toLowerCase()]; });
+    var opts = function (v) { var o = ''; for (var i = 1; i <= B.CHART_MAX; i++) o += '<option' + (i === v ? ' selected' : '') + '>' + i + '</option>'; return o; };
+    var h = '<details class="chart-wrap" data-chart="' + id + '"' + (u.open ? ' open' : '') + '><summary>Seating chart <span class="sum-time">' + ch.seats.length + ' placed</span></summary>';
+    h += '<div class="chart-controls"><label>Rows <select data-chart-dim="rows">' + opts(ch.rows) + '</select></label><label>Seats per row <select data-chart-dim="cols">' + opts(ch.cols) + '</select></label></div>';
+    h += '<p class="hint">Click a name, then a seat, or drag names onto seats. Click a placed seat to add how to say the name and a short note. Saved only in this browser; prints on one page.</p>';
+    h += '<div class="chips" aria-label="Students not seated yet">' + (unplaced.length ? unplaced.map(function (n) {
+      return '<button type="button" class="chip-name" draggable="true" data-chip="' + esc(n) + '" aria-pressed="' + (u.chip === n) + '">' + esc(n) + '</button>';
+    }).join('') : '<span class="hint">' + (ch.seats.length ? 'Everyone on your list is seated.' : 'Add names under \u201cStudent first names\u201d above, or click an empty seat and type a name.') + '</span>') + '</div>';
+    h += '<div class="chart-front">Front of the room</div><div class="chart-scroll"><div class="chart-grid" style="--cols:' + ch.cols + '">';
+    for (var r = 0; r < ch.rows; r++) for (var cc = 0; cc < ch.cols; cc++) {
+      var key = r + ',' + cc, st = seatAt(c, key);
+      h += '<button type="button" class="seat-cell' + (st ? ' filled' : '') + (u.seat === key ? ' selected' : '') + '" data-seat="' + key + '"' + (st ? ' draggable="true"' : '') + ' aria-label="' + esc(cellLabel(r, cc, st)) + '">' + cellInner(st) + '</button>';
+    }
+    h += '</div></div>';
+    if (u.seat) {
+      var es = seatAt(c, u.seat) || { name: '', say: '', note: '' }, rc = u.seat.split(',');
+      h += '<div class="seat-editor"><h4>Row ' + (+rc[0] + 1) + ', seat ' + (+rc[1] + 1) + '</h4><div class="grid3">' +
+        '<div><label for="se-name-' + id + '">First name</label><input id="se-name-' + id + '" data-se="name" value="' + esc(es.name) + '" maxlength="40"></div>' +
+        '<div><label for="se-say-' + id + '">How to say it</label><input id="se-say-' + id + '" data-se="say" value="' + esc(es.say) + '" maxlength="60" placeholder="e.g. shi-VAWN"></div>' +
+        '<div><label for="se-note-' + id + '">Short note</label><input id="se-note-' + id + '" data-se="note" value="' + esc(es.note) + '" maxlength="120" placeholder="e.g. needs to sit near the front"></div></div>' +
+        '<div class="row-actions"><button type="button" class="btn small" data-seat-done>Done</button><button type="button" class="btn ghost small danger" data-seat-clear>Empty this seat</button></div></div>';
+    }
+    return h + '</details>';
+  }
+  function chartClass(el) { var w = el.closest('[data-chart]'); if (!w) return null; var id = w.getAttribute('data-chart'); return binder.classes.filter(function (x) { return x.id === id; })[0] || null; }
+  function rerenderChart(c, focusSel, keepState) {
+    var w = document.querySelector('.chart-wrap[data-chart="' + c.id + '"]'); if (!w) return;
+    ui(c.id).open = keepState ? w.open : true;
+    w.outerHTML = chartHTML(c);
+    if (focusSel) { var f = document.querySelector('.chart-wrap[data-chart="' + c.id + '"] ' + focusSel); if (f) f.focus(); }
+    var sum = document.querySelector('.chart-wrap[data-chart="' + c.id + '"] summary .sum-time'); if (sum) sum.textContent = c.chart.seats.length + ' placed';
+  }
+  function placeName(c, key, name) {
+    var rc = key.split(','), target = seatAt(c, key);
+    var prev = c.chart.seats.filter(function (st) { return st.name.toLowerCase() === name.toLowerCase(); })[0];
+    if (prev && prev === target) return;
+    if (prev) { if (target) { target.r = prev.r; target.c = prev.c; } prev.r = +rc[0]; prev.c = +rc[1]; }   // already seated: move, swapping
+    else if (target) { target.name = name; target.say = ''; target.note = ''; }                            // replaces whoever sat there
+    else c.chart.seats.push({ r: +rc[0], c: +rc[1], name: name, say: '', note: '' });
+    c.chart = B.normChart(c.chart);
+  }
+  function moveSeat(c, from, to) {
+    if (from === to) return;
+    var a = seatAt(c, from), b2 = seatAt(c, to), tr = to.split(','), fr = from.split(',');
+    if (!a) return;
+    if (b2) { b2.r = +fr[0]; b2.c = +fr[1]; }
+    a.r = +tr[0]; a.c = +tr[1];
+    c.chart = B.normChart(c.chart);
+  }
+  document.addEventListener('toggle', function (e) {
+    var t = e.target; if (t.classList && t.classList.contains('chart-wrap')) ui(t.getAttribute('data-chart')).open = t.open;
+  }, true);
+  document.addEventListener('dragstart', function (e) {
+    var t = e.target.closest && e.target.closest('[data-chip],[data-seat]'); if (!t) return;
+    e.dataTransfer.setData('text/plain', t.hasAttribute('data-chip') ? 'chip:' + t.getAttribute('data-chip') : 'seat:' + t.getAttribute('data-seat'));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.addEventListener('dragover', function (e) { if (e.target.closest && e.target.closest('[data-seat]')) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } });
+  document.addEventListener('drop', function (e) {
+    var cell = e.target.closest && e.target.closest('[data-seat]'); if (!cell) return;
+    e.preventDefault();
+    var c = chartClass(cell); if (!c) return;
+    var d = e.dataTransfer.getData('text/plain') || '';
+    if (d.indexOf('chip:') === 0) placeName(c, cell.getAttribute('data-seat'), d.slice(5));
+    else if (d.indexOf('seat:') === 0) moveSeat(c, d.slice(5), cell.getAttribute('data-seat'));
+    else return;
+    ui(c.id).chip = null; rerenderChart(c); saveSoon();
+  });
+  function chartClick(t) {
+    var c = chartClass(t); if (!c) return false;
+    var u = ui(c.id);
+    if (t.hasAttribute('data-chip')) { var n = t.getAttribute('data-chip'); u.chip = u.chip === n ? null : n; u.seat = null; rerenderChart(c, '[data-chip="' + n.replace(/"/g, '\\"') + '"]'); return true; }
+    if (t.hasAttribute('data-seat')) {
+      var key = t.getAttribute('data-seat');
+      if (u.chip) { placeName(c, key, u.chip); u.chip = null; u.seat = null; rerenderChart(c, '[data-seat="' + key + '"]'); saveSoon(); }
+      else { u.seat = u.seat === key ? null : key; rerenderChart(c, u.seat ? '[data-se=' + (seatAt(c, key) ? 'say' : 'name') + ']' : null); }
+      return true;
+    }
+    if (t.hasAttribute('data-seat-done')) { var k2 = u.seat; u.seat = null; rerenderChart(c, k2 ? '[data-seat="' + k2 + '"]' : null); return true; }
+    if (t.hasAttribute('data-seat-clear')) { var st = u.seat && seatAt(c, u.seat); if (st) c.chart.seats.splice(c.chart.seats.indexOf(st), 1); u.seat = null; rerenderChart(c); saveSoon(); return true; }
+    return false;
+  }
+  function chartInput(t) {
+    var c = chartClass(t); if (!c) return;
+    var u = ui(c.id); if (!u.seat) return;
+    var st = seatAt(c, u.seat), f = t.getAttribute('data-se');
+    if (!st) { if (f !== 'name' || !t.value.trim()) return; var rc = u.seat.split(','); st = { r: +rc[0], c: +rc[1], name: '', say: '', note: '' }; c.chart.seats.push(st); }
+    st[f] = t.value.replace(/\n/g, ' ').slice(0, f === 'name' ? 40 : f === 'say' ? 60 : 120);
+    if (f === 'name' && !st.name.trim()) c.chart.seats.splice(c.chart.seats.indexOf(st), 1);
+    var cell = document.querySelector('.chart-wrap[data-chart="' + c.id + '"] [data-seat="' + u.seat + '"]');
+    if (cell) { var live = seatAt(c, u.seat); cell.innerHTML = cellInner(live); cell.classList.toggle('filled', !!live); var rc2 = u.seat.split(','); cell.setAttribute('aria-label', cellLabel(+rc2[0], +rc2[1], live)); }
+    var sum = document.querySelector('.chart-wrap[data-chart="' + c.id + '"] summary .sum-time'); if (sum) sum.textContent = c.chart.seats.filter(function (x) { return x.name.trim(); }).length + ' placed';
+    saveSoon();
+  }
+  function rerenderAllCharts() { binder.classes.forEach(function (c) { if (document.querySelector('.chart-wrap[data-chart="' + c.id + '"]')) rerenderChart(c, null, true); }); }
+
+  // ---------- school file (Building plan): lesson bank + import/export ----------
+  function renderLessons() {
+    var el = $('lessonBank'); if (!el) return;
+    var popts = binder.classes.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.label) + '</option>'; }).join('');
+    el.innerHTML = binder.lessonBank.length ? binder.lessonBank.map(function (l, i) {
+      return '<div class="lesson" data-li="' + i + '"><div><strong>' + esc(l.title || 'Untitled lesson') + '</strong><p class="hint">' + esc(l.plan.split('\n')[0].slice(0, 140)) + '</p></div>' +
+        '<div class="lesson-actions"><label class="sr" for="lp-' + i + '">Period</label><select id="lp-' + i + '" data-lesson-period>' + popts + '</select>' +
+        '<button type="button" class="btn ghost small" data-lesson-use="' + i + '">Use as any-day plan</button>' +
+        '<button type="button" class="btn ghost small danger" data-lesson-del="' + i + '" aria-label="Remove lesson">Remove</button></div></div>';
+    }).join('') : '<p class="hint">No lessons yet. Add one below or import a school file.</p>';
+  }
+  function schoolMsg(t, bad) { var m = $('schoolMsg'); m.hidden = false; m.innerHTML = t; m.className = bad ? 'error' : 'status-line'; }
+
   function renderDay() {
     $('dayPeriods').innerHTML = binder.classes.map(function (c) {
       var on = dayState.checked[c.id] !== false;
@@ -99,12 +229,19 @@
         '<button class="btn ghost small" type="button" data-gap="' + esc(c.id) + '">Gap-check this period in the one-day tool</button></div>';
     }).join('');
   }
-  function renderAll() { renderShared(); renderContacts(); renderClasses(); }
+  function renderAll() { renderShared(); renderContacts(); renderClasses(); renderLessons(); }
 
   // ---------- events ----------
+  var chipTimer = null;
   document.addEventListener('input', function (e) {
     var t = e.target;
-    if (t.hasAttribute('data-shared')) { binder[t.getAttribute('data-shared')] = t.value; saveSoon(); return; }
+    if (t.hasAttribute('data-shared')) {
+      binder[t.getAttribute('data-shared')] = t.value; saveSoon();
+      if (t.getAttribute('data-shared') === 'students') { clearTimeout(chipTimer); chipTimer = setTimeout(rerenderAllCharts, 400); }
+      return;
+    }
+    if (t.hasAttribute('data-se')) { chartInput(t); return; }
+    if (t.type === 'checkbox' || t.tagName === 'SELECT') return;
     if (t.hasAttribute('data-c')) { var i = +t.closest('.contact-row').getAttribute('data-i'); binder.contacts[i][t.getAttribute('data-c')] = t.value; saveSoon(); return; }
     if (t.hasAttribute('data-k')) {
       var id = t.closest('.period-card').getAttribute('data-id');
@@ -122,9 +259,31 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.hasAttribute('data-day-check')) dayState.checked[t.getAttribute('data-day-check')] = t.checked;
+    if (t.getAttribute('data-k') === 'storyOn') {
+      var sc = binder.classes.filter(function (x) { return x.id === t.closest('.period-card').getAttribute('data-id'); })[0];
+      if (sc) { sc.storyOn = t.checked ? 'yes' : ''; saveSoon(); }
+    }
+    if (t.hasAttribute('data-chart-dim')) {
+      var cc = chartClass(t); if (!cc) return;
+      var next = { rows: cc.chart.rows, cols: cc.chart.cols, seats: cc.chart.seats };
+      next[t.getAttribute('data-chart-dim')] = +t.value;
+      var kept = B.normChart(next);
+      if (kept.seats.length < cc.chart.seats.length && !confirm((cc.chart.seats.length - kept.seats.length) + ' seated student(s) are outside the smaller chart and will be removed from it. Continue?')) { t.value = cc.chart[t.getAttribute('data-chart-dim')]; return; }
+      cc.chart = kept; ui(cc.id).seat = null; rerenderChart(cc, '[data-chart-dim=' + t.getAttribute('data-chart-dim') + ']'); saveSoon();
+    }
   });
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button'); if (!t) return;
+    if (chartClick(t)) return;
+    if (t.hasAttribute('data-lesson-use')) {
+      var l = binder.lessonBank[+t.getAttribute('data-lesson-use')], pid = t.parentNode.querySelector('[data-lesson-period]').value;
+      var pc = binder.classes.filter(function (x) { return x.id === pid; })[0];
+      if (l && pc && (!pc.anyDay.trim() || confirm('Replace the any-day plan for ' + pc.label + ' with \u201c' + (l.title || 'this lesson') + '\u201d?'))) {
+        pc.anyDay = l.plan; renderClasses(); saveSoon(); schoolMsg('Set the any-day plan for ' + esc(pc.label) + ' to \u201c' + esc(l.title || 'lesson') + '\u201d.');
+      }
+      return;
+    }
+    if (t.hasAttribute('data-lesson-del')) { binder.lessonBank.splice(+t.getAttribute('data-lesson-del'), 1); renderLessons(); saveSoon(); return; }
     if (t.hasAttribute('data-remove-contact')) { binder.contacts.splice(+t.getAttribute('data-remove-contact'), 1); renderContacts(); saveSoon(); }
     else if (t.hasAttribute('data-dup')) {
       if (binder.classes.length >= B.MAX_CLASSES) return;
@@ -175,6 +334,43 @@
     showPack(B.buildPack(binder, { mode: 'day', date: $('dayDate').value, periods: ids, lessons: dayState.lessons }));
   });
   $('printBtn').addEventListener('click', function () { window.print(); });
+
+  $('addLesson').addEventListener('click', function () {
+    var title = $('lessonTitle').value.trim(), plan = $('lessonPlan').value.trim();
+    if (!plan) { schoolMsg('Type the lesson steps first.', true); return; }
+    var before = binder.lessonBank.length;
+    binder.lessonBank = B.normalizeBinder(Object.assign({}, binder, { lessonBank: binder.lessonBank.concat([{ title: title, plan: plan }]) })).lessonBank;
+    if (binder.lessonBank.length === before) { schoolMsg('That lesson is already in the bank (or the bank is full).', true); return; }
+    $('lessonTitle').value = ''; $('lessonPlan').value = ''; renderLessons(); saveSoon(); schoolMsg('Added to the lesson bank.');
+  });
+  $('schoolExport').addEventListener('click', function () {
+    saveNow();
+    var out = B.buildSchoolFile(binder);
+    var blob = new Blob([out.json], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'sub-ready-school-file.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    schoolMsg('Saved sub-ready-school-file.json. It has no student information' + (out.removed.length ? '; ' + out.removed.length + ' line' + (out.removed.length === 1 ? '' : 's') + ' that mentioned a student name were left out' : '') + '. Share it with teachers in your building; each one imports it.');
+  });
+  $('schoolFile').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var sc = B.parseSchoolFile(r.result);
+        var res = B.mergeSchoolFile(binder, sc);
+        binder = res.binder; saveNow(); renderAll();
+        var rp = res.report;
+        schoolMsg('Merged ' + esc(f.name) + ': filled ' + (rp.filled.length ? esc(rp.filled.join(', ')) : 'no blank fields') +
+          (rp.contactsAdded + rp.contactsFilled ? '; ' + (rp.contactsAdded + rp.contactsFilled) + ' contact' + (rp.contactsAdded + rp.contactsFilled === 1 ? '' : 's') : '') +
+          (rp.lessonsAdded ? '; ' + rp.lessonsAdded + ' lesson' + (rp.lessonsAdded === 1 ? '' : 's') + ' added to the bank' : '') +
+          (rp.kept.length ? '. Kept your own text for: ' + esc(rp.kept.join(', ')) : '') + '. Nothing syncs live; import again when the school updates the file.');
+      } catch (err) { schoolMsg(esc(err.message), true); }
+      finally { e.target.value = ''; }
+    };
+    r.readAsText(f);
+  });
   $('closePack').addEventListener('click', function () { $('packWrap').hidden = true; document.body.classList.remove('has-pack'); });
 
   function gapCheck(id) {
