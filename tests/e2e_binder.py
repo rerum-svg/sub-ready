@@ -184,7 +184,7 @@ with sync_playwright() as p:
     ctx3.close()
 
     # Optional writing activity (Scripto) with the flag turned on for this test only, plus the paper story activity
-    TOK = 'h7Kq2xW9pL'; WANT = 'https://scriptorerum.com/school/s/' + TOK + '?ref=subready'
+    TOK = 'h7Kq2xW9pL'; WANT = 'https://www.scriptorerum.com/school/s/' + TOK + '?ref=subready'
     ctx4 = b.new_context(viewport={'width': 1280, 'height': 900})
     ctx4.route('**/js/config.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body="window.SUB_READY_CONFIG={PRO_URL:'',EARLY_ACCESS:true,SCRIPTO_ACTIVITY:true};"))
     req4, outside4 = [], []
@@ -204,7 +204,7 @@ with sync_playwright() as p:
     p0 = pg4.locator('.period-card').nth(0)
     ok('flag on: each period has the optional "Student writing activity (Scripto)" field', pg4.locator('.writing-fields').count() == 3 and 'Student writing activity (Scripto)' in p0.locator('.writing-fields legend').text_content())
     p0.locator('[data-k=writingLink]').fill('https://example.com/school/s/' + TOK)
-    ok('link check: wrong site refused inline', 'starts with https://scriptorerum.com/school/s/' in p0.locator('[data-link-msg]').text_content())
+    ok('link check: wrong site refused inline', 'starts with https://www.scriptorerum.com/school/s/' in p0.locator('[data-link-msg]').text_content())
     p0.locator('[data-k=writingLink]').fill('https://scriptorerum.com/school/s/' + TOK + '?student=Maya')
     ok('link check: good link accepted, shows the cleaned link', WANT in p0.locator('[data-link-msg]').text_content() and 'Maya' not in p0.locator('[data-link-msg]').text_content())
     p0.locator('[data-k=writingTime]').fill('Last 20 minutes')
@@ -220,7 +220,7 @@ with sync_playwright() as p:
     # Day plan field for today (period 3 = third card, id p5? use the row id)
     dw_id = pg4.locator('.day-row').nth(2).get_attribute('data-id')
     pg4.locator('.day-row').nth(2).locator('summary').click()
-    pg4.locator('[data-dw=link][data-dw-id="%s"]' % dw_id).fill('https://scriptorerum.com/school/s/TodayOnly42')
+    pg4.locator('[data-dw=link][data-dw-id="%s"]' % dw_id).fill('https://www.scriptorerum.com/school/s/TodayOnly42')
     pg4.locator('[data-dw=time][data-dw-id="%s"]' % dw_id).fill('1:10')
     pg4.fill('#dayDate', 'Tuesday, December 2')
     pg4.click('#dayBtn'); pg4.wait_for_selector('#pack .sheet')

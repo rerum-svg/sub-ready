@@ -171,11 +171,13 @@ const sbx2 = { window: {} }; vm.runInNewContext(fs.readFileSync(path.join(root, 
 check(g, 'shipped config: SCRIPTO_ACTIVITY is off', sbx2.window.SUB_READY_CONFIG.SCRIPTO_ACTIVITY === false);
 const TOK = 'h7Kq2xW9pL';
 const GOOD = 'https://scriptorerum.com/school/s/' + TOK;
-const WANT = GOOD + '?ref=subready';
+const WANT = 'https://www.scriptorerum.com/school/s/' + TOK + '?ref=subready';
 check(g, 'label is "Student writing activity (Scripto)"', S.COPY.label === 'Student writing activity (Scripto)');
+check(g, 'www session link accepted as-is', S.validateLink('https://www.scriptorerum.com/school/s/' + TOK).url === WANT);
+check(g, 'bare-domain link accepted and normalized to the www form', S.validateLink(GOOD).url === WANT && /^https:\/\/www\./.test(S.validateLink(GOOD).url));
 check(g, 'valid session link accepted, ?ref=subready added', S.validateLink(GOOD).ok && S.validateLink(GOOD).url === WANT);
 check(g, 'surrounding spaces and trailing slash tolerated', S.validateLink('  ' + GOOD + '/ ').url === WANT);
-[['http://scriptorerum.com/school/s/' + TOK, 'http'], ['https://www.scriptorerum.com/school/s/' + TOK, 'www host'], ['https://scriptorerum.com.evil.example/school/s/' + TOK, 'look-alike host'],
+[['http://scriptorerum.com/school/s/' + TOK, 'http'], ['https://WWW.scriptorerum.com/school/s/' + TOK, 'upper-case host'], ['https://m.scriptorerum.com/school/s/' + TOK, 'other subdomain'], ['https://www.scriptorerum.com.evil.example/school/s/' + TOK, 'www look-alike'], ['https://wwwscriptorerum.com/school/s/' + TOK, 'wwwscriptorerum'], ['https://scriptorerum.com.evil.example/school/s/' + TOK, 'look-alike host'],
  ['https://evil.example/?u=https://scriptorerum.com/school/s/' + TOK, 'prefix not at start'], ['https://scriptorerum.com/join/' + TOK, '/join link'], ['https://scriptorerum.com/school/try', '/try demo'],
  ['https://scriptorerum.com/school/s/', 'no token'], ['https://scriptorerum.com/school/s/abc', 'token too short'], ['https://scriptorerum.com/school/s/ab cd ef gh', 'spaces'],
  ['https://scriptorerum.com/school/s/' + TOK + '/../../x', 'path tricks'], ['javascript:alert(1)//https://scriptorerum.com/school/s/' + TOK, 'javascript:'], ['https://scriptorerum.com/school/s/%3Cscript%3E', 'encoded junk']

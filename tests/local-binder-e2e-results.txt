@@ -67,8 +67,8 @@ PASS print block: the 3 steps from spec 4.3 -- ['Open this link on the teacher c
 PASS print block: link as text, new tab, rel=noopener
 PASS print block: QR is inline SVG (no image request)
 PASS no iframe anywhere
-PASS privacy: no student name, roster or binder data in any Scripto link -- ['https://scriptorerum.com/school?ref=subready', 'https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready', 'https://scriptorerum.com/school/s/TodayOnly42?ref=subready']
-PASS QR code scans to exactly the cleaned link -- https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready
+PASS privacy: no student name, roster or binder data in any Scripto link -- ['https://scriptorerum.com/school?ref=subready', 'https://www.scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready', 'https://www.scriptorerum.com/school/s/TodayOnly42?ref=subready']
+PASS QR code scans to exactly the cleaned link -- https://www.scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready
 PASS story activity: two paper sheets added after its period
 PASS print PDF: one page per sheet incl. story sheets (8) -- 8
 PASS print PDF: block title, steps and link printed

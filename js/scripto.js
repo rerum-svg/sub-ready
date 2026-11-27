@@ -10,7 +10,9 @@
   root.SubReadyScripto = api;
 })(typeof self !== 'undefined' ? self : this, function (qrcode) {
   'use strict';
-  var PREFIX = 'https://scriptorerum.com/school/s/';
+  // Accepted: https://scriptorerum.com/school/s/ and https://www.scriptorerum.com/school/s/ . Printed and encoded: the www form.
+  var PREFIX = 'https://www.scriptorerum.com/school/s/';
+  var ACCEPT = ['https://www.scriptorerum.com/school/s/', 'https://scriptorerum.com/school/s/'];
   var REF = 'ref=subready';
   // Copy from the Scripto School spec v2, section 4.3 (and section 8 for the label).
   var COPY = {
@@ -44,8 +46,9 @@
     opts = opts || {};
     var s = String(raw == null ? '' : raw).trim();
     if (!s) return { ok: false, empty: true, error: '' };
-    if (s.indexOf(PREFIX) !== 0) return { ok: false, error: 'Paste the session link from Scripto. It starts with ' + PREFIX };
-    var rest = s.slice(PREFIX.length);
+    var pre = ACCEPT.filter(function (p) { return s.indexOf(p) === 0; })[0];
+    if (!pre) return { ok: false, error: 'Paste the session link from Scripto. It starts with ' + PREFIX };
+    var rest = s.slice(pre.length);
     var token = rest.split(/[?#]/)[0].replace(/\/+$/, '');
     if (!TOKEN_RE.test(token)) return { ok: false, error: 'That doesn\u2019t look like a complete session link. Copy it again from Scripto.' };
     var low = token.toLowerCase();
@@ -79,5 +82,5 @@
     return h;
   }
 
-  return { PREFIX: PREFIX, COPY: COPY, validateLink: validateLink, qrSVG: qrSVG, renderBlock: renderBlock };
+  return { PREFIX: PREFIX, ACCEPT: ACCEPT, COPY: COPY, validateLink: validateLink, qrSVG: qrSVG, renderBlock: renderBlock };
 });

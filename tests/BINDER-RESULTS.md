@@ -1,8 +1,8 @@
 # Class binder test results
 
-Run: 2026-11-26T22:56:43.448Z (UTC)  
+Run: 2026-11-27T11:21:40.479Z (UTC)  
 Command: `node tests/run-binder-tests.js`  
-**147 passed, 0 failed** (147 checks)
+**152 passed, 0 failed** (152 checks)
 
 Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 
@@ -87,10 +87,15 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | hand-off | unknown period -> null | PASS |  |
 | writing activity | shipped config: SCRIPTO_ACTIVITY is off | PASS |  |
 | writing activity | label is "Student writing activity (Scripto)" | PASS |  |
+| writing activity | www session link accepted as-is | PASS |  |
+| writing activity | bare-domain link accepted and normalized to the www form | PASS |  |
 | writing activity | valid session link accepted, ?ref=subready added | PASS |  |
 | writing activity | surrounding spaces and trailing slash tolerated | PASS |  |
 | writing activity | rejected: http | PASS | http://scriptorerum.com/school/s/h7Kq2xW9pL |
-| writing activity | rejected: www host | PASS | https://www.scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: upper-case host | PASS | https://WWW.scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: other subdomain | PASS | https://m.scriptorerum.com/school/s/h7Kq2xW9pL |
+| writing activity | rejected: www look-alike | PASS | https://www.scriptorerum.com.evil.example/school/s/h7Kq2xW9pL |
+| writing activity | rejected: wwwscriptorerum | PASS | https://wwwscriptorerum.com/school/s/h7Kq2xW9pL |
 | writing activity | rejected: look-alike host | PASS | https://scriptorerum.com.evil.example/school/s/h7Kq2xW9pL |
 | writing activity | rejected: prefix not at start | PASS | https://evil.example/?u=https://scriptorerum.com/school/s/h7Kq2xW9pL |
 | writing activity | rejected: /join link | PASS | https://scriptorerum.com/join/h7Kq2xW9pL |
@@ -102,7 +107,7 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | writing activity | rejected: javascript: | PASS | javascript:alert(1)//https://scriptorerum.com/school/s/h7Kq2xW9pL |
 | writing activity | rejected: encoded junk | PASS | https://scriptorerum.com/school/s/%3Cscript%3E |
 | writing activity | empty link is just "not set", no error | PASS |  |
-| writing activity | query and fragment are dropped (only the token is kept) | PASS | https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready |
+| writing activity | query and fragment are dropped (only the token is kept) | PASS | https://www.scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready |
 | writing activity | token that spells a student name is refused | PASS |  |
 | writing activity | fields saved: export -> import keeps link, time slot and notes | PASS |  |
 | writing activity | fields saved: save -> reload keeps them | PASS |  |
@@ -117,7 +122,7 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | writing activity | print block: QR encodes exactly the cleaned link (deterministic redraw matches) | PASS |  |
 | writing activity | print block: privacy line word for word | PASS |  |
 | writing activity | print block: time slot and notes for the sub | PASS |  |
-| writing activity | privacy: every link in the pack is exactly prefix + token + ?ref=subready | PASS | https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready https://scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready |
+| writing activity | privacy: every link in the pack is exactly prefix + token + ?ref=subready | PASS | https://www.scriptorerum.com/school/s/h7Kq2xW9pL?ref=subready https://www.scriptorerum.com/school/s/h7Kq2xW9pL?ref=subre |
 | writing activity | privacy: no student name, roster or binder text in any link | PASS |  |
 | writing activity | privacy: a name pasted into the link’s query is stripped | PASS |  |
 | writing activity | privacy: the only text handed to the QR/link builder is the cleaned link | PASS |  |
