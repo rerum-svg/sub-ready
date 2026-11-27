@@ -6,7 +6,16 @@ A free, static web tool for teachers: paste rough sub-plan notes, answer 5–8 t
 - **The AI only reorganizes the teacher's own words.** Plain code handles times, layout, validation and checks. Anything the teacher didn't provide prints as *"Not provided — ask the office."* Any line that uses words not found in the teacher's notes is marked **Check**.
 - **Privacy:** student names are swapped for `[STUDENT_n]` tokens on the device before any AI step, and restored only in the final output. Nothing is uploaded.
 
-## Class binder (free early access)
+## Plans and payment
+
+- **The one-day tool is free.** The class binder has a **14-day free trial** that starts the first time the binder is opened in a browser (`localStorage` key `subready.trialStart`). After that it asks for the **Teacher plan ($5/month)** or the **Building plan ($49/month)**, both PayPal subscriptions in David's own PayPal business account.
+- **Nothing is ever deleted when a trial ends.** The binder is shown read-only (editing, import, delete and printing paused) and **Export always works**.
+- **PayPal loads only after a Subscribe click** (`js/paypal.js`). Before that, no page makes any outside request. Only the plan id goes to PayPal; no class or student data.
+- After approval, a thank-you panel shows the PayPal subscription ID, and `subready.unlocked` + `subready.subscriptionId` are saved locally. **Restore on another device**: paste the ID to unlock that browser. This is honor-based: there's no server, so the ID is not checked with PayPal.
+- Switch: `TRIAL_ON` in `js/config.js` (false = binder free for everyone). An empty plan id shows that plan as "coming soon". Trial math and unlock logic: `js/plan-core.js`.
+- Every printed pack and end-of-day note ends with "Made with Sub-Ready (free)", `https://rerum-svg.github.io/sub-ready/?src=pack` and a QR drawn on the device. Nothing reads or counts `?src=`; there are no analytics.
+
+## Class binder
 
 `binder.html` lets a teacher set up once and reuse it:
 
@@ -19,7 +28,7 @@ A free, static web tool for teachers: paste rough sub-plan notes, answer 5–8 t
 
 `compare.html` lists only facts each competitor publishes, with a source link and the date checked.
 
-## Newer binder features (free early access)
+## Newer binder features
 
 - **The sub's end-of-day note:** every print pack ends with a short form for the sub. If the teacher adds their own email or mobile number, the form also prints QR codes (drawn on the device with `js/vendor/qrcode.js`, MIT) that open a prefilled `mailto:` or `sms:` addressed to the teacher. The prefilled text has only the room and date, never student names. Sub-Ready sends nothing.
 - **Seating chart per period:** a grid up to 10 x 10. Click a name and then a seat, or drag names onto seats (and seats onto seats to move). Each seat has a first name, how to say it and a short note. Saved only in this browser, printed on one page after that period. Every chart name and pronunciation-list name is added to the names hidden before any AI step.
@@ -45,7 +54,9 @@ index.html        landing + tool (one page)
 styles.css        warm, mobile-readable design + print stylesheet
 binder.html       class binder, emergency plan, multi-period plan, print pack
 compare.html      sourced comparison with other sub-plan tools
-js/config.js      PRO_URL = '' and EARLY_ACCESS = true (the single paid/free switch)
+js/config.js      PayPal client id, plan ids, TRIAL_ON / TRIAL_DAYS
+js/plan-core.js   trial clock, local unlock, restore (pure, Node-testable)
+js/paypal.js      pricing cards; loads the PayPal SDK only on a Subscribe click; thank-you + restore
 js/vendor/qrcode.js  MIT QR code generator (Kazuhiko Arase), used for the end-of-day note QR codes
 js/binder-core.js binder logic: validation, save/load, export/import, gap check, print pack
 js/binder.js      binder UI

@@ -1,6 +1,10 @@
 PASS page loads (HTTP 200)
 PASS device AI status shown -- available (first use downloads the model)
-PASS Pro button shows coming-soon state, no link -- Pro coming soon, join the list
+PASS hero: new headline -- Your sub can’t ask what “the blue bin” means.
+PASS hero: primary button goes to the tool
+PASS hero: secondary button goes to the binder
+PASS pricing: Teacher and Building subscribe buttons shown
+PASS pricing: PayPal SDK not loaded on page load
 PASS empty input shows error -- Paste your plan first — even rough notes are fine.
 PASS elem-2nd: gap prompt has no student names
 PASS elem-2nd: 5-8 questions in UI -- 8
@@ -47,4 +51,5 @@ PASS ms-math: names restored in output
 PASS ms-math: no tokens left
 PASS ms-math: right name in right place: chatty; Grace S sits up front
 PASS ms-math: right name in right place: Destiny M: Can pass out chromebooks
+PASS one-day tool: no requests to any other server (nothing clicked Subscribe)
 PASS no JS errors

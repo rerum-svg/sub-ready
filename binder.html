@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Class binder (free early access) · Sub-Ready</title>
+<title>Class binder · Sub-Ready</title>
 <meta name="description" content="Save your class once, keep a no-prep emergency sub plan ready, and print a front-office pack. Saved only in your browser.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23e8743b'/><path d='M18 34l9 9 19-21' stroke='white' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <meta name="theme-color" content="#eef2fb">
@@ -20,13 +20,14 @@
 
 <main id="binder" class="wrap">
   <div class="no-print">
-    <p class="eyebrow">Class binder <span class="badge" id="accessLabel">Free early access</span></p>
+    <p class="eyebrow">Class binder <span class="badge" id="accessLabel">Free trial</span></p>
     <h1>Set up your class once. Every sick day after that is quick.</h1>
     <p class="lede">Save your routines, seating notes, supplies and procedures for each period. Keep a no-prep emergency plan ready, and print a front-office pack any time.</p>
     <div class="privacy-note">
-      <strong>Where this is saved:</strong> only in this browser on this device. Nothing is uploaded and there&rsquo;s no account.
+      <strong>Where this is saved:</strong> only in this browser on this device. Your binder is never uploaded and there&rsquo;s no account.
       To move it to another computer, use <em>Export</em> and <em>Import</em>. The exported file holds your notes and any student first names you typed, so keep it private.
       Clearing your browser data deletes the binder unless you exported it.
+      If you subscribe, checkout runs on PayPal, and Sub-Ready sends PayPal no class or student data.
     </div>
     <aside class="whatsnew" id="whatsNew" aria-labelledby="wnTitle">
       <p class="wn-lead"><strong id="wnTitle">Sub-Ready is actively being built &mdash; new features land regularly.</strong></p>
@@ -41,14 +42,14 @@
         </ul>
       </details>
     </aside>
-    <p class="hint" id="earlyNote">These features are free during early access. Later they&rsquo;ll be part of the Teacher plan ($5/month) and the Building plan ($49/month). Those plans aren&rsquo;t on sale yet, and nothing here asks for payment.</p>
+    <p class="hint" id="trialNote" hidden></p>
   </div>
 
-  <div id="gate" class="card no-print" hidden>
-    <h2>The class binder is part of the Teacher plan</h2>
-    <p id="gateText">The Teacher plan is coming soon.</p>
-    <a id="gateBtn" class="btn" aria-disabled="true">Coming soon</a>
-  </div>
+  <section id="gate" class="card no-print plans-card" aria-labelledby="gateTitle" hidden>
+    <h2 id="gateTitle">Keep the class binder after your trial</h2>
+    <p id="gateText"></p>
+    <div id="gatePlans"></div>
+  </section>
 
   <div id="app" class="no-print">
     <div class="toolbar">
@@ -58,6 +59,7 @@
       <button class="btn ghost small danger" id="clearBtn" type="button">Delete from this browser</button>
     </div>
     <p id="ioMsg" class="hint" role="status" hidden></p>
+    <p id="lockNote" class="warn" hidden><strong>Read-only for now.</strong> Your trial has ended, so editing and printing are paused. Nothing has been deleted. Use <em>Export (.json)</em> any time to keep a copy, and subscribe above to pick up where you left off.</p>
 
     <section class="card">
       <h2><span class="num">1</span>Whole room</h2>
@@ -130,7 +132,7 @@
     </section>
 
     <section class="card" id="schoolSection">
-      <h2><span class="num">6</span>School file <span class="badge">Building plan &middot; free early access</span></h2>
+      <h2><span class="num">6</span>School file <span class="badge">Building plan feature</span></h2>
       <p class="hint">One person (the office or a team lead) keeps the building&rsquo;s bell schedule, procedures, contacts by role and a bank of any-day lessons in one file, then shares it. Each teacher imports it here. It fills in what&rsquo;s blank in your binder and never overwrites what you wrote. There&rsquo;s no live sync: import again when the school updates the file. A school file never contains student information.</p>
       <label for="f-bells">School bell schedule</label>
       <textarea id="f-bells" data-shared="bells" rows="3" placeholder="P1 8:00-8:50&#10;P2 8:55-9:45&#10;Lunch 11:30-12:05"></textarea>
@@ -168,6 +170,8 @@
 <script src="js/core.js"></script>
 <script src="js/vendor/qrcode.js"></script>
 <script src="js/binder-core.js"></script>
+<script src="js/plan-core.js"></script>
+<script src="js/paypal.js"></script>
 <script src="js/binder.js"></script>
 </body>
 </html>

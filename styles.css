@@ -17,6 +17,7 @@
   font-size:17px;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:#f2f4fa;color:var(--ink);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;position:relative}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
@@ -238,6 +239,8 @@ table.pk-sched,table.pk-contacts,table.pk-form{border-collapse:collapse;width:10
 .qr-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px}
 .qr-fig{margin:0;text-align:center}
 .qr-fig svg{width:1.25in;height:1.25in;display:block;margin:0 auto}
+.made-with{display:flex;align-items:center;gap:10px;margin:18px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:.78rem;color:var(--muted);word-break:break-all}
+.made-with svg{width:.6in;height:.6in;flex:none}
 .qr-fig figcaption{font-size:.85rem;margin-top:4px;word-break:break-all}
 table.pk-chart{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:5px}
 .pk-chart td{border:1.5px solid #3a3a3c;border-radius:8px;vertical-align:top;padding:0}
@@ -315,6 +318,35 @@ table.pk-chart{width:100%;table-layout:fixed;border-collapse:separate;border-spa
   .daynote .notes .lines.short{height:.62in;background:repeating-linear-gradient(#fff,#fff 22px,#888 23px)}
   .daynote .pk-form td,.daynote .pk-form th{padding:5px 6px}
   .qr-fig svg{width:1.05in;height:1.05in}
+  .made-with{color:#000 !important;font-size:8pt;border-top:1px solid #999;break-inside:avoid;page-break-inside:avoid}
+  .made-with svg{width:.55in;height:.55in}
   .seat-in strong{font-size:10pt}
   .chart-front{color:#000;border-color:#000}
 }
+
+/* ---------- plans & checkout ---------- */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:16px 0}
+.plan-card{background:var(--glass-strong);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow),var(--hi);display:flex;flex-direction:column;gap:4px}
+.plan-card h3{margin:0;font-size:1.15rem}
+.plan-price{margin:2px 0 0;color:var(--ink)}
+.plan-price .amt{font-size:2.2rem;font-weight:700;letter-spacing:-.02em}
+.plan-price .per{color:var(--muted);font-weight:600;margin-left:2px}
+.plan-per{color:var(--muted);font-size:.92rem;margin:0 0 6px}
+.plan-list{margin:4px 0 12px;padding-left:20px;font-size:.95rem}
+.plan-card .btn{align-self:flex-start;margin-top:auto}
+.pp-slot{margin-top:auto;min-height:45px;max-width:340px}
+.badge.soon{background:var(--ph-bg);color:var(--ph);align-self:flex-start;margin-top:auto}
+.thanks{background:var(--green-bg);border:1px solid #9fd3b2;border-radius:var(--radius);padding:16px 20px;margin:14px 0}
+.thanks h3{margin-top:0;color:var(--green)}
+.thanks:focus{outline:3px solid var(--accent);outline-offset:3px}
+.sub-id{font-family:var(--mono);font-size:1.05rem;background:#fff;border:1px solid var(--line-strong);border-radius:8px;padding:2px 8px;user-select:all}
+.restore{margin:10px 0}
+.restore-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.restore-row input{max-width:260px;font-family:var(--mono)}
+.locked-gate{border-left:4px solid var(--warn-b)}
+#app.locked section.card{opacity:.72}
+.filebtn.disabled{opacity:.5;pointer-events:none}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+@media (prefers-reduced-transparency:reduce){.plan-card{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){.plan-card{background:#fff}}

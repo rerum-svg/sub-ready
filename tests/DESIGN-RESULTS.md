@@ -40,5 +40,5 @@ Command: `node tests/run-design-tests.js`
 | whats new | index.html: no dates, user counts or testimonials | PASS |
 | whats new | binder.html: lists real recent additions (6) | PASS |
 | whats new | binder.html: no dates, user counts or testimonials | PASS |
-| whats new | plans still "coming soon", nothing for sale | PASS |
+| whats new | pricing shown honestly: both plans configured, $5 and $49 | PASS |
 | whats new | no fake urgency anywhere | PASS |

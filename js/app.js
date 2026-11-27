@@ -2,22 +2,13 @@
 (function () {
   'use strict';
   var C = window.SubReadyCore;
-  var CFG = window.SUB_READY_CONFIG || { PRO_URL: '' };
+  var CFG = window.SUB_READY_CONFIG || {};
   var $ = function (id) { return document.getElementById(id); };
   var state = { nameMap: [], masked: null, questions: [], gaps: null, mode: 'copy', session: null };
   var LM_OPTS = { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] };
 
-  // ---------- Pro placeholder ----------
-  (function setupPro() {
-    var b = $('proBtn');
-    if (CFG.PRO_URL) {
-      b.href = CFG.PRO_URL; b.textContent = 'Get the Teacher plan ($5/month)'; b.removeAttribute('aria-disabled');
-      b.rel = 'noopener'; $('proNote').textContent = '';
-    } else {
-      b.removeAttribute('href'); b.classList.add('disabled');
-      b.addEventListener('click', function (e) { e.preventDefault(); });
-    }
-  })();
+  // ---------- plans (PayPal loads only after a Subscribe click) ----------
+  if (window.SubReadyPay) window.SubReadyPay.render($('plans'));
 
   // ---------- on-device AI detection (Chrome Prompt API) ----------
   function deviceAvailability() {

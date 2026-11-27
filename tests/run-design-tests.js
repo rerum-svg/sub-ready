@@ -65,7 +65,7 @@ check('whats new', 'the one-day tool links to what\u2019s new', /building-note[^
   check('whats new', p + ': lists real recent additions (' + items.length + ')', items.length >= 5 && /end-of-day note/.test(box) && /[Ss]eating chart/.test(box) && /school file/.test(box) && /[Pp]ass-the-page/.test(box));
   check('whats new', p + ': no dates, user counts or testimonials', !/\b(19|20)\d\d\b|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? \d|\d+\s*(teachers|users|schools)\b|testimonial|loved by|trusted by|\u201d\s*\u2014/i.test(box));
 });
-check('whats new', 'plans still "coming soon", nothing for sale', /coming soon/i.test(html['index.html']) && /PRO_URL: ''/.test(read('js/config.js')));
+check('whats new', 'pricing shown honestly: both plans configured, $5 and $49', /TEACHER_PLAN_ID: 'P-/.test(read('js/config.js')) && /BUILDING_PLAN_ID: 'P-/.test(read('js/config.js')) && /\$5\/month/.test(html['index.html']) && /\$49\/month/.test(html['index.html']));
 check('whats new', 'no fake urgency anywhere', !/limited time|only \d+ left|hurry|act now|spots left/i.test(allHtml));
 
 let md = '# Design test results\n\nCommand: `node tests/run-design-tests.js`  \n**' + pass + ' passed, ' + fail + ' failed**\n\n| Group | Check | Result |\n|---|---|---|\n';

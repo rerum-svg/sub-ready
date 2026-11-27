@@ -22,9 +22,9 @@
 <section class="hero no-print">
   <div class="wrap">
     <p class="eyebrow">For teachers who are sick at 5:45 AM</p>
-    <h1>Your rough notes, turned into a plan a stranger can follow.</h1>
-    <p class="lede">Sub plans are hard because a substitute can&rsquo;t ask you what &ldquo;the usual warm-up&rdquo; or &ldquo;the blue bin&rdquo; means. Sub-Ready finds those gaps, asks you a few quick questions, and turns <em>your own words</em> into a printable, minute-by-minute script.</p>
-    <p><a class="btn" href="#tool">Make a sub plan</a> <a class="btn ghost" href="binder.html">Open the class binder</a> <span class="muted">Free. No account. Nothing uploaded.</span></p>
+    <h1>Your sub can&rsquo;t ask what &ldquo;the blue bin&rdquo; means.</h1>
+    <p class="lede">Sub-Ready finds those gaps before you&rsquo;re out. Answer 5 to 8 questions and print a plan with times, routines, helpers and emergency info. Nothing is uploaded.</p>
+    <p class="hero-ctas"><a class="btn" id="heroFind" href="#tool">Find the gaps in my plan</a> <a class="btn ghost" id="heroBinder" href="binder.html">Set up my class binder</a> <span class="muted">Free. No account. Nothing uploaded.</span></p>
     <aside class="whatsnew" id="whatsNew" aria-labelledby="wnTitle">
       <p class="wn-lead"><strong id="wnTitle">Sub-Ready is actively being built &mdash; new features land regularly.</strong></p>
       <details open><summary>What&rsquo;s new</summary>
@@ -63,6 +63,7 @@
   <h2>Privacy, plainly</h2>
   <ul>
     <li><strong>Nothing is uploaded.</strong> This is a static web page. There is no server, no account, no analytics and no database.</li>
+    <li><strong>Paying is separate.</strong> If you subscribe, checkout runs on PayPal. PayPal&rsquo;s button loads only after you click Subscribe, and Sub-Ready sends PayPal no class or student data.</li>
     <li><strong>Student names are hidden first.</strong> Before any AI step, the names you list are swapped for placeholders like [STUDENT_1] on your device. They&rsquo;re put back only in the final printout.</li>
     <li><strong>Two ways to use AI:</strong> Chrome&rsquo;s built-in on-device model (runs on your computer), or copy a ready-made prompt into any chatbot you already use. In copy mode you can see exactly what you&rsquo;re pasting.</li>
     <li>Don&rsquo;t put passwords, medical details or student ID numbers in your notes. Keep those in your printed binder.</li>
@@ -166,7 +167,7 @@
 </section>
 
 <section id="pro" class="wrap pro no-print">
-  <h2>Class binder <span class="badge">Free early access</span></h2>
+  <h2>Class binder <span class="badge">14-day free trial</span></h2>
   <p>The one-day tool above is free for unlimited plans. For teachers who want to set things up once, the class binder adds:</p>
   <ul>
     <li><strong>A saved class profile</strong>: routines, seating and help notes, supplies, bathroom and emergency procedures, contacts by role. Saved only in this browser, with export and import to move it between computers.</li>
@@ -177,22 +178,24 @@
     <li><strong>A shared school file</strong> (Building plan): the office shares one file of bell times, procedures, contacts and any-day lessons, and each teacher imports it. No live sync, no student data.</li>
     <li><strong>A paper pass-the-page story activity</strong> the sub can run with no devices.</li>
   </ul>
-  <p><a class="btn" href="binder.html">Open the class binder (free)</a></p>
-  <h3>Plans (coming soon)</h3>
-  <p>During early access these features are free. Later they&rsquo;ll be part of a <strong>Teacher plan at $5/month</strong> and a <strong>Building plan at $49/month</strong>. Neither is on sale yet.</p>
-  <a id="proBtn" class="btn ghost" aria-disabled="true">Pro coming soon, join the list</a>
-  <p class="hint" id="proNote">Nothing is for sale on this page today. <a href="compare.html">How Sub-Ready compares with other sub-plan tools</a>.</p>
+  <p><a class="btn" href="binder.html">Start the 14-day free trial</a> <span class="muted">No card, no account. The trial starts the first time you open the binder in a browser.</span></p>
+  <h3 id="pricing">Pricing</h3>
+  <p>The one-day tool stays free. After the 14-day trial, the class binder is part of the <strong>Teacher plan: $5/month per teacher</strong>. Schools can get the <strong>Building plan: $49/month per school</strong>. Cancel anytime in PayPal. When a trial ends, nothing you saved is deleted and you can always export it.</p>
+  <div id="plans"></div>
+  <p class="hint" id="proNote">Sub-Ready is actively being built &mdash; new features land regularly, and they&rsquo;re included in your plan. <a href="compare.html">How Sub-Ready compares with other sub-plan tools</a>.</p>
 </section>
 </main>
 
 <footer class="site-foot no-print">
   <div class="wrap">
-    <p>Sub-Ready is a free, static web page. No accounts, no tracking, no uploads. Always review a plan before you print it.</p>
+    <p>Sub-Ready is a static web page. The one-day tool is free. No accounts, no tracking, no uploads. Always review a plan before you print it.</p>
   </div>
 </footer>
 
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
+<script src="js/plan-core.js"></script>
+<script src="js/paypal.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

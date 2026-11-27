@@ -297,15 +297,7 @@
   }
   function clear(storage) { storage.removeItem(STORAGE_KEY); }
 
-  // ---------- access gate (single flag) ----------
-  // EARLY_ACCESS true  -> every binder feature is free and labeled "Free early access".
-  // EARLY_ACCESS false -> features need the paid plan: PRO_URL must be set, and the browser must hold an unlock.
-  function access(cfg, unlocked) {
-    cfg = cfg || {};
-    if (cfg.EARLY_ACCESS) return { enabled: true, label: 'Free early access', paid: false };
-    if (cfg.PRO_URL && unlocked) return { enabled: true, label: 'Teacher plan', paid: true };
-    return { enabled: false, label: cfg.PRO_URL ? 'Teacher plan ($5/month)' : 'Coming soon', paid: false, url: cfg.PRO_URL || '' };
-  }
+  // Access (trial, plans, unlock) lives in js/plan-core.js.
 
   // ---------- times ----------
   function classTimes(c) {
@@ -471,6 +463,12 @@
     h += '</tbody></table><p class="hint">Names as the teacher typed them. Kept only on the teacher\u2019s device and on this paper.</p></section>';
     return h;
   }
+  // One small line at the end of every printed pack and end-of-day note. Plain text + a QR drawn on this device.
+  // ?src=pack is a fixed label only: nothing reads or counts it, and it carries no class or student data.
+  var PACK_URL = 'https://rerum-svg.github.io/sub-ready/?src=pack';
+  function madeWithHTML() {
+    return '<p class="made-with">' + qrSVG(PACK_URL, 'QR code: Sub-Ready website') + '<span>Made with Sub-Ready (free) \u00b7 ' + esc(PACK_URL) + '</span></p>';
+  }
   function noteSheetHTML(m) {
     var n = m.note || {};
     var h = '<section class="sheet daynote"><p class="pk-kicker">Please leave this on my desk, or send it from your phone</p><h2>End-of-day note' + (blank(m.teacher) ? '' : ' for ' + esc(m.teacher)) + '</h2>';
@@ -489,7 +487,7 @@
       if (n.sms) h += '<figure class="qr-fig" data-href="' + esc(n.sms) + '">' + qrSVG(n.sms, 'QR code: text the note') + '<figcaption>Text: ' + esc(n.phone) + '</figcaption></figure>';
       h += '</div></div>';
     }
-    h += '</section>';
+    h += madeWithHTML() + '</section>';
     return h;
   }
   function rowIf(label, text) { return blank(text) ? '' : row(label, text); }
@@ -548,6 +546,7 @@
     h.push(row('Emergency procedures', m.emergency));
     h.push(row('Health & allergy notes', m.health));
     h.push('<div class="pk-row"><h4>Who to contact</h4>' + contactsHTML(m.contacts) + '</div>');
+    h.push(madeWithHTML());
     h.push('</section>');
     h.push('</div>');
     return h.join('');
@@ -580,7 +579,7 @@
     buildSchoolFile: buildSchoolFile, parseSchoolFile: parseSchoolFile, mergeSchoolFile: mergeSchoolFile,
     emptyBinder: emptyBinder, emptyClass: emptyClass, normalizeBinder: normalizeBinder,
     exportJSON: exportJSON, importJSON: importJSON, save: save, load: load, clear: clear,
-    access: access, classTimes: classTimes, readiness: readiness,
+    classTimes: classTimes, readiness: readiness, PACK_URL: PACK_URL, madeWithHTML: madeWithHTML,
     buildPack: buildPack, renderPackHTML: renderPackHTML, toToolHandoff: toToolHandoff
   };
 });

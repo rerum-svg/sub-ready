@@ -1,8 +1,8 @@
 # Class binder test results
 
-Run: 2026-11-27T11:37:49.534Z (UTC)  
+Run: 2026-11-27T12:08:08.771Z (UTC)  
 Command: `node tests/run-binder-tests.js`  
-**162 passed, 0 failed** (162 checks)
+**211 passed, 0 failed** (211 checks)
 
 Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 
@@ -40,13 +40,45 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | export & import | newer version rejected | PASS |  |
 | export & import | huge file rejected | PASS |  |
 | export & import | array JSON rejected | PASS |  |
-| early-access flag | shipped config: PRO_URL is empty | PASS |  |
-| early-access flag | shipped config: EARLY_ACCESS is on | PASS |  |
-| early-access flag | early access -> enabled, labeled free, not paid | PASS |  |
-| early-access flag | flag off, no PRO_URL -> locked, "Coming soon", no link | PASS |  |
-| early-access flag | flag off, PRO_URL set, not unlocked -> locked with checkout link | PASS |  |
-| early-access flag | flag off, PRO_URL set, unlocked -> enabled as Teacher plan | PASS |  |
-| early-access flag | unlock alone without PRO_URL does not enable | PASS |  |
+| plans & trial | shipped config: Teacher plan id set | PASS |  |
+| plans & trial | shipped config: Building plan id set | PASS |  |
+| plans & trial | shipped config: one client id (the Sub-Ready app) for both plans | PASS |  |
+| plans & trial | shipped config: trial switch on, 14 days | PASS |  |
+| plans & trial | no old EARLY_ACCESS / PRO_URL switches left | PASS |  |
+| plans & trial | SDK url: client id, vault=true, intent=subscription | PASS |  |
+| plans & trial | both plans for sale with the shipped config | PASS |  |
+| plans & trial | Building plan not for sale while its id is empty | PASS |  |
+| plans & trial | malformed plan id is treated as empty | PASS |  |
+| plans & trial | trial day 0: enabled, 14 days left | PASS |  |
+| plans & trial | trial day 13: enabled, 1 day left | PASS |  |
+| plans & trial | trial day 13, 23:45 later: still enabled | PASS |  |
+| plans & trial | trial day 14: locked | PASS |  |
+| plans & trial | trial day 15: locked, "Trial ended" | PASS |  |
+| plans & trial | trial ends exactly 14 days after start | PASS |  |
+| plans & trial | clock set back before the start counts as day 0 | PASS |  |
+| plans & trial | no trial start yet -> full trial | PASS |  |
+| plans & trial | unlocked after the trial -> enabled as Teacher plan | PASS |  |
+| plans & trial | Building subscription unlocks the binder too | PASS |  |
+| plans & trial | switch off -> binder free for everyone, even after day 15 | PASS |  |
+| plans & trial | no Teacher plan id -> nothing to buy, binder stays free | PASS |  |
+| plans & trial | trial starts on first use and is stored locally | PASS |  |
+| plans & trial | a later visit never moves the start date | PASS |  |
+| plans & trial | subscription id accepted: I- prefix, trimmed, upper-cased | PASS |  |
+| plans & trial | bad subscription ids rejected | PASS |  |
+| plans & trial | unlock (after PayPal approval) saves the flag and the id | PASS |  |
+| plans & trial | unlock leaves the saved binder untouched | PASS |  |
+| plans & trial | after unlock, access is enabled on day 20 | PASS |  |
+| plans & trial | restore path: locked on day 15 before restoring | PASS |  |
+| plans & trial | restore path: a bad id is refused with a clear message and stays locked | PASS |  |
+| plans & trial | restore path: a pasted id unlocks this browser | PASS |  |
+| plans & trial | no data loss when locked: binder still loads in full | PASS |  |
+| plans & trial | no data loss when locked: export still produces the whole binder | PASS |  |
+| plans & trial | plan code never removes data | PASS |  |
+| plans & trial | PayPal SDK is only added inside the Subscribe click handler | PASS |  |
+| plans & trial | only the plan id goes to PayPal (no binder, names or notes) | PASS |  |
+| plans & trial | no alert() after approval; thank-you panel shows the id | PASS |  |
+| plans & trial | Building thank-you says to share the school file with staff | PASS |  |
+| plans & trial | restore copy is honest about verification | PASS |  |
 | times | "8:00"-"8:50" | PASS |  |
 | times | "12:50"-"1:40" crosses noon | PASS |  |
 | times | "1:05 PM"-"1:55 PM" | PASS |  |
@@ -111,7 +143,7 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | end-of-day note | printed form is in every pack, before the emergency sheet | PASS |  |
 | end-of-day note | form lists each period in the pack with a rating | PASS |  |
 | end-of-day note | form has what got done / didn’t / anything to know | PASS |  |
-| end-of-day note | no contact -> no QR code | PASS |  |
+| end-of-day note | no contact -> no QR code (other than the footer) | PASS |  |
 | end-of-day note | mailto: to the teacher’s own address | PASS |  |
 | end-of-day note | sms: to the teacher’s own number (digits only) | PASS |  |
 | end-of-day note | prefilled body is a blank form with room and date | PASS | End-of-day note, Room 214, Tuesday, December 2 How it went: Done: Not done: Anything I should know: From: |
@@ -162,11 +194,28 @@ Rendered packs: `tests/out/pack-emergency.html`, `tests/out/pack-day.html`
 | story activity | reminds students not to use classmates’ real names | PASS |  |
 | story activity | story page has 8 turn boxes | PASS |  |
 | story activity | off by default: base pack unchanged | PASS |  |
-| pages | no Rerum or Rerum product names in site files | PASS |  |
+| pages | no Rerum or Rerum product names in site files (the GitHub Pages host name aside) | PASS |  |
 | pages | no analytics or tracking scripts | PASS |  |
 | pages | binder code makes no network calls | PASS |  |
+| pages | plans code makes no fetch/XHR/beacon calls | PASS |  |
 | pages | compare page: 6 rows (Sub-Ready + 5 tools) | PASS | 6 |
 | pages | compare page: every other tool has a source link and as-of date | PASS |  |
 | pages | compare page: no repeated customer counts or testimonials | PASS |  |
-| pages | landing: plans labeled coming soon, no fake urgency | PASS |  |
+| pages | landing: honest pricing ($5 teacher, $49 school, cancel anytime in PayPal), no fake urgency | PASS |  |
+| pages | landing: still says it is actively being built | PASS |  |
+| pages | privacy copy: checkout on PayPal, no class or student data sent, still "no analytics" | PASS |  |
+| pages | compare page: pricing matches the site | PASS |  |
+| pages | hero: new headline and subhead | PASS |  |
+| pages | hero: primary "Find the gaps in my plan" -> tool, secondary "Set up my class binder" -> binder | PASS |  |
+| pages | hero: microcopy | PASS |  |
+| pages | hero claim "5 to 8 questions" matches the tool (enforced 5-8) | PASS |  |
+| pages | footer: pack URL is the site with ?src=pack | PASS |  |
+| pages | footer: emergency pack ends with the line and a QR | PASS |  |
+| pages | footer: day pack ends with it too | PASS |  |
+| pages | footer: end-of-day note has it | PASS |  |
+| pages | footer: exactly twice per pack (note + last sheet) | PASS |  |
+| pages | footer: no class or student data in the footer | PASS |  |
+| pages | footer QR encodes the pack URL and stays small (<= version 4) | PASS |  |
+| pages | ?src=pack is never read or counted by site code (no analytics) | PASS |  |
+| pages | footer prints small and in black | PASS |  |
 | pages | landing: no old "$9 one-time" offer | PASS |  |

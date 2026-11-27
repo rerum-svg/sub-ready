@@ -50,9 +50,12 @@ with sync_playwright() as p:
 
     r = pg.goto(base + 'binder.html', wait_until='networkidle')
     ok('binder page loads (HTTP %s)' % r.status, r.status == 200)
-    ok('labeled "Free early access"', pg.text_content('#accessLabel') == 'Free early access')
+    ok('day 0: labeled "Free trial \u00b7 14 days left"', pg.text_content('#accessLabel') == 'Free trial \u00b7 14 days left', pg.text_content('#accessLabel'))
+    ok('day 0: trial start saved in this browser', pg.evaluate("localStorage.getItem('subready.trialStart')") is not None)
     ok('says it is saved only in this browser', 'only in this browser' in pg.text_content('.privacy-note'))
-    ok('plans described as not on sale yet', 'aren\u2019t on sale yet' in pg.text_content('#earlyNote'))
+    tn = pg.text_content('#trialNote')
+    ok('trial note: 14 days, nothing deleted, export always works, $5/month', pg.is_visible('#trialNote') and '14-day free trial' in tn and 'always export' in tn and '$5/month' in tn, tn)
+    ok('day 0: subscribe offered but PayPal not loaded', pg.locator('#gatePlans [data-subscribe=teacher]').count() == 1 and pg.locator('script[src*="paypal.com"]').count() == 0)
     ok('default contact roles offered', pg.locator('.contact-row').count() == 3)
 
     # 1. Saved class profile: fill, save, reload
@@ -104,6 +107,17 @@ with sync_playwright() as p:
     ok('print PDF: page 2 is the schedule', 'Schedule' in pg_texts[1] and '8:00 AM' in pg_texts[1])
     ok('print PDF: page 6 is the end-of-day note', 'End-of-day note' in pg_texts[5] and 'What got done' in pg_texts[5])
     ok('print PDF: last page is the emergency sheet', 'Emergency sheet' in pg_texts[6] and 'Door 6' in pg_texts[6])
+    ok('print PDF: pack ends with "Made with Sub-Ready (free)" + pack URL', 'Made with Sub-Ready (free)' in pg_texts[6] and 'rerum-svg.github.io/sub-ready/?src=pack' in pg_texts[6].replace(' ', ''))
+    ok('print PDF: end-of-day note has the footer too', 'Made with Sub-Ready (free)' in pg_texts[5])
+    if cv2 is not None:
+        big_css = pg.add_style_tag(content='.made-with svg{width:420px !important;height:420px !important}')
+        pg.emulate_media(media='screen')
+        qp = tempfile.mktemp(suffix='.png'); pg.locator('#pack .sheet.emergency .made-with svg').screenshot(path=qp)
+        big_css.evaluate('e => e.remove()')
+        img = cv2.imread(qp); img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        data = cv2.QRCodeDetector().detectAndDecode(img)[0] or cv2.QRCodeDetectorAruco().detectAndDecode(img)[0]
+        ok('print footer QR scans to https://rerum-svg.github.io/sub-ready/?src=pack', data == 'https://rerum-svg.github.io/sub-ready/?src=pack', data)
+        pg.emulate_media(media='print')
     ok('print PDF: no editor text leaked', 'Delete from this browser' not in txt and 'Check my binder' not in txt)
     pg.emulate_media(media='screen')
 
@@ -171,18 +185,143 @@ with sync_playwright() as p:
     pg.reload(wait_until='networkidle')
     ok('hand-off: used once (cleared after reload)', pg.input_value('#plan') == '')
 
-    # Landing page pro section
-    ok('landing: binder labeled free early access', 'Free early access' in pg.text_content('#pro'))
-    ok('landing: plans coming soon, button has no link', 'coming soon' in pg.text_content('#proBtn').lower() and pg.get_attribute('#proBtn', 'href') is None)
+    # ---------- Landing pricing ----------
+    ok('landing: binder labeled 14-day free trial', '14-day free trial' in pg.text_content('#pro'))
+    ok('landing: honest pricing, cancel anytime in PayPal', all(x in pg.text_content('#pro') for x in ['$5/month per teacher', '$49/month per school', 'Cancel anytime in PayPal']))
+    ok('landing: privacy says checkout runs on PayPal with no class or student data', 'checkout runs on PayPal' in pg.text_content('#privacy') and 'no class or student data' in pg.text_content('#privacy') and 'no analytics' in pg.text_content('#privacy'))
 
-    # Gate: flag off with no PRO_URL -> locked, no link
-    ctx3 = b.new_context(viewport={'width': 1280, 'height': 900})
-    ctx3.route('**/js/config.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body="window.SUB_READY_CONFIG={PRO_URL:'',EARLY_ACCESS:false};"))
-    pg3 = ctx3.new_page(); pg3.goto(base + 'binder.html', wait_until='networkidle')
-    ok('flag off: binder locked behind the plan', pg3.is_visible('#gate') and not pg3.is_visible('#app'))
-    ok('flag off, no PRO_URL: "Coming soon", no link', pg3.text_content('#gateBtn') == 'Coming soon' and pg3.get_attribute('#gateBtn', 'href') is None)
-    ctx3.close()
+    # ---------- Plans: trial clock, lock, unlock, restore. PayPal loads only after a Subscribe click ----------
+    DAYMS = 86400000
+    CLIENT = 'AY5HQPWM12-j5wkw9D6iiTnOuNShiZi9H8WAhLbmHXaZ8EnEQkS5Oy7bW-cGRyJy6XBeayZ8jClFmNyI'
+    FAKE_SDK = """window.paypal={Buttons:function(o){return{render:function(el){var b=document.createElement('button');b.type='button';b.textContent='Fake PayPal';b.className='fake-pp';
+      b.onclick=function(){Promise.resolve(o.createSubscription({},{subscription:{create:function(x){window.__ppCreate=x;return Promise.resolve('I-FAKE');}}})).then(function(){o.onApprove({subscriptionID:window.__ppSubId||'I-TESTSUB12345'},{});});};
+      (typeof el==='string'?document.querySelector(el):el).appendChild(b);return Promise.resolve();}};}};"""
+    def plan_ctx(days_ago, stub=True, seed=True, cfg=None):
+        c = b.new_context(viewport={'width': 1280, 'height': 900}, accept_downloads=True)
+        reqs = []
+        if stub:
+            c.route('https://www.paypal.com/sdk/js**', lambda route: route.fulfill(status=200, content_type='application/javascript', body=FAKE_SDK))
+        if cfg:
+            c.route('**/js/config.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body=cfg))
+        p_ = c.new_page(); p_.on('dialog', lambda d: d.accept()); p_.on('pageerror', lambda e: errors.append(str(e)))
+        p_.on('request', lambda r: reqs.append(r.url))
+        p_.goto(base + 'binder.html', wait_until='networkidle')
+        if seed:
+            p_.evaluate("([fix, start]) => { localStorage.setItem('subready.binder.v1', JSON.stringify(fix)); localStorage.setItem('subready.trialStart', String(start)); }", [FIX, int(time.time() * 1000) - days_ago])
+            p_.reload(wait_until='networkidle')
+        return c, p_, reqs
+    def pp_reqs(reqs): return [u for u in reqs if 'paypal.com' in u or 'paypalobjects.com' in u]
 
+    # Day 13: still in the trial
+    c13, p13, r13 = plan_ctx(13 * DAYMS + 3600000)
+    ok('day 13: "1 day left", binder editable', p13.text_content('#accessLabel') == 'Free trial \u00b7 1 day left' and p13.locator('#app section.card[inert]').count() == 0, p13.text_content('#accessLabel'))
+    p13.fill('[data-shared=room]', '215'); p13.wait_for_function("document.getElementById('saveStatus').textContent.indexOf('Saved') === 0")
+    ok('day 13: edits still save', '"room":"215"' in p13.evaluate("localStorage.getItem('subready.binder.v1')"))
+    c13.close()
+
+    # Day 15: locked, nothing lost, export works
+    c15, p15, r15 = plan_ctx(15 * DAYMS)
+    stored15 = p15.evaluate("localStorage.getItem('subready.binder.v1')")
+    ok('day 15: labeled "Trial ended", gate says so', p15.text_content('#accessLabel') == 'Trial ended' and p15.is_visible('#gate') and 'free trial has ended' in p15.text_content('#gateTitle'))
+    ok('day 15: lock note says nothing was deleted and export works', p15.is_visible('#lockNote') and 'Nothing has been deleted' in p15.text_content('#lockNote') and 'Export' in p15.text_content('#lockNote'))
+    ok('day 15: saved data still shown in full', p15.input_value('[data-shared=emergency]') == FIX['emergency'] and p15.locator('.period-card').count() == 3)
+    ok('day 15: editing locked (sections inert, import and delete disabled)', p15.locator('#app section.card[inert]').count() >= 5 and p15.is_disabled('#importFile') and p15.is_disabled('#clearBtn'))
+    p15.evaluate("""() => { const el = document.querySelector('[data-shared=emergency]'); el.value = 'CHANGED'; el.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('emergencyBtn').click(); document.getElementById('dayBtn').click(); }""")
+    p15.wait_for_timeout(600)
+    ok('day 15: scripted edits are not saved and no print pack opens', p15.evaluate("localStorage.getItem('subready.binder.v1')") == stored15 and p15.is_hidden('#packWrap'))
+    p15.reload(wait_until='networkidle')
+    with p15.expect_download() as dl15:
+        p15.click('#exportBtn')
+    ep = pathlib.Path(tempfile.mkdtemp()) / 'locked.json'; dl15.value.save_as(str(ep))
+    ej = json.loads(ep.read_text())
+    ok('day 15: Export still works and holds the whole binder', ej.get('kind') == 'class-binder' and len(ej['binder']['classes']) == 3 and ej['binder']['emergency'] == FIX['emergency'])
+    ok('day 15: no data lost (storage unchanged)', p15.evaluate("localStorage.getItem('subready.binder.v1')") == stored15)
+    ok('day 15: PayPal not loaded before a Subscribe click', not pp_reqs(r15) and p15.locator('script[src*="paypal.com"]').count() == 0)
+    shot_l = p15.add_style_tag(content='header.site{position:static !important}')
+    p15.evaluate('window.scrollTo(0, 0)')
+    p15.screenshot(path=str(screens / (prefix + 'binder-locked.png')), full_page=False)
+    shot_l.evaluate('e => e.remove()')
+    # Unlock through (stubbed) PayPal checkout
+    p15.click('#gatePlans [data-subscribe=teacher]')
+    p15.wait_for_selector('#gatePlans .fake-pp')
+    sdk = [u for u in pp_reqs(r15) if '/sdk/js' in u]
+    ok('subscribe click: SDK requested with the Sub-Ready client id, vault and subscription intent', len(sdk) == 1 and ('client-id=' + CLIENT) in sdk[0] and 'vault=true' in sdk[0] and 'intent=subscription' in sdk[0], sdk[:1])
+    p15.click('#gatePlans .fake-pp')
+    p15.wait_for_selector('#gatePlans [data-thanks]:not([hidden])')
+    ok('approval: only the Teacher plan id is sent to PayPal', p15.evaluate('window.__ppCreate') == {'plan_id': 'P-4HY43543H4125745JNMEW6UY'}, p15.evaluate('window.__ppCreate'))
+    th = p15.text_content('#gatePlans [data-thanks]')
+    ok('approval: thank-you panel shows the subscription id and how to cancel', 'Thank you' in th and 'I-TESTSUB12345' in th and 'Manage automatic payments' in th, th[:120])
+    ok('approval: unlocked flag and id saved locally', p15.evaluate("[localStorage.getItem('subready.unlocked'), localStorage.getItem('subready.subscriptionId')]") == ['1', 'I-TESTSUB12345'])
+    ok('approval: binder unlocked in place', p15.locator('#app section.card[inert]').count() == 0 and p15.is_hidden('#lockNote') and p15.text_content('#accessLabel') == 'Teacher plan')
+    ok('approval: nothing lost', p15.evaluate("localStorage.getItem('subready.binder.v1')") == stored15)
+    p15.evaluate('window.scrollTo(0, 0)')
+    p15.locator('#gate').screenshot(path=str(screens / (prefix + 'binder-thanks.png')))
+    p15.reload(wait_until='networkidle')
+    ok('approval: still unlocked after reload, edits save again', p15.text_content('#accessLabel') == 'Teacher plan' and p15.is_enabled('[data-shared=room]'))
+    c15.close()
+
+    # Building plan subscription unlocks too, and says to share the school file
+    cb, pb_, rb = plan_ctx(20 * DAYMS)
+    pb_.evaluate("window.__ppSubId = 'I-BUILDING12345'")
+    pb_.click('#gatePlans [data-subscribe=building]'); pb_.wait_for_selector('#gatePlans .fake-pp'); pb_.click('#gatePlans .fake-pp')
+    pb_.wait_for_selector('#gatePlans [data-thanks]:not([hidden])')
+    ok('building: only the Building plan id is sent to PayPal', pb_.evaluate('window.__ppCreate') == {'plan_id': 'P-1TV20312FM9343509NMEXBEQ'})
+    tb = pb_.text_content('#gatePlans [data-thanks]')
+    ok('building: thank-you says to share the school file with staff', 'Building plan' in tb and 'share the school file with your staff' in tb and 'I-BUILDING12345' in tb)
+    ok('building: binder unlocked, labeled Building plan', pb_.text_content('#accessLabel') == 'Building plan' and pb_.locator('#app section.card[inert]').count() == 0)
+    cb.close()
+
+    # Restore on another device
+    cr, pr, rr = plan_ctx(30 * DAYMS)
+    pr.click('#gatePlans [data-restore] summary')
+    ok('restore: copy is honest (no server check)', 'doesn\u2019t check the ID with PayPal' in pr.text_content('#gatePlans [data-restore]'))
+    pr.fill('#gatePlans [data-restore-input]', 'not-an-id'); pr.click('#gatePlans [data-restore-btn]')
+    ok('restore: bad id refused, still locked', 'starts with I-' in pr.text_content('#gatePlans [data-restore-msg]') and pr.text_content('#accessLabel') == 'Trial ended')
+    pr.fill('#gatePlans [data-restore-input]', ' i-restore12345 '); pr.click('#gatePlans [data-restore-btn]')
+    ok('restore: pasted id unlocks this browser', pr.text_content('#accessLabel') == 'Teacher plan' and pr.evaluate("localStorage.getItem('subready.subscriptionId')") == 'I-RESTORE12345' and pr.locator('#app section.card[inert]').count() == 0)
+    ok('restore: no PayPal request at all', not pp_reqs(rr))
+    ok('restore: data intact', pr.input_value('[data-shared=emergency]') == FIX['emergency'])
+    cr.close()
+
+    # Building plan hidden while its id is empty
+    cfg_nob = "window.SUB_READY_CONFIG={PAYPAL_CLIENT_ID:'" + CLIENT + "',TEACHER_PLAN_ID:'P-4HY43543H4125745JNMEW6UY',BUILDING_PLAN_ID:'',TRIAL_ON:true,TRIAL_DAYS:14};"
+    cn = b.new_context(viewport={'width': 1280, 'height': 900})
+    cn.route('**/js/config.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body=cfg_nob))
+    pn = cn.new_page(); pn.goto(base, wait_until='networkidle')
+    ok('empty Building id: no Building subscribe button, shows "Coming soon"', pn.locator('#plans [data-subscribe=building]').count() == 0 and 'Coming soon' in pn.text_content('#plans [data-plan-card=building]') and pn.locator('#plans [data-subscribe=teacher]').count() == 1)
+    cn.close()
+
+    # Real PayPal SDK on the landing page (renders the buttons; no payment is made)
+    cl = b.new_context(viewport={'width': 1280, 'height': 900})
+    rl = []
+    pl = cl.new_page(); pl.on('request', lambda r: rl.append(r.url)); pl.on('pageerror', lambda e: errors.append(str(e)))
+    rsp = pl.goto(base + '?src=pack', wait_until='networkidle')
+    ok('?src=pack: landing loads normally (HTTP %s)' % rsp.status, rsp.status == 200 and pl.locator('#tool').count() == 1 and pl.is_visible('#heroFind'))
+    ok('?src=pack: no outside request before Subscribe', not [u for u in rl if not u.startswith(base) and not u.startswith('data:') and not u.startswith('blob:')])
+    pl.goto(base + 'binder.html?src=pack', wait_until='networkidle')
+    ok('?src=pack: binder loads normally', pl.is_visible('#app') and 'Free trial' in pl.text_content('#accessLabel'))
+    pl.goto(base + '#pricing', wait_until='networkidle')
+    before = [u for u in rl if 'paypal.com' in u]
+    pl.click('#plans [data-subscribe=teacher]')
+    try:
+        pl.wait_for_selector('#plans [data-pp-slot=teacher] iframe', timeout=25000); t_ok = True
+    except Exception:
+        t_ok = False
+    ok('real PayPal: Teacher button renders with the Sub-Ready client id', t_ok and not before, pl.text_content('[data-pay-msg]'))
+    pl.click('#plans [data-subscribe=building]')
+    try:
+        pl.wait_for_selector('#plans [data-pp-slot=building] iframe', timeout=25000); b_ok = True
+    except Exception:
+        b_ok = False
+    ok('real PayPal: Building button renders too (same SDK, loaded once)', b_ok and pl.locator('script[src*="paypal.com/sdk"]').count() == 1)
+    pl.wait_for_timeout(2500)
+    hosts = sorted(set(u.split('/')[2] for u in rl if not u.startswith(base) and not u.startswith('data:') and not u.startswith('blob:')))
+    ok('real PayPal: outside requests only to PayPal after the click', hosts and all(h.endswith('paypal.com') or h.endswith('paypalobjects.com') for h in hosts), ' '.join(hosts))
+    ok('real PayPal: no error message shown', pl.is_hidden('[data-pay-msg]'))
+    shot_p = pl.add_style_tag(content='header.site{position:static !important}')
+    pl.locator('#pro').screenshot(path=str(screens / (prefix + 'pricing-paypal.png')))
+    shot_p.evaluate('e => e.remove()')
+    cl.close()
     # ---------- New: quick-win fields, seating chart, end-of-day note, story, school file ----------
     ctx5 = b.new_context(viewport={'width': 1280, 'height': 900}, accept_downloads=True)
     req5 = []
@@ -247,7 +386,7 @@ with sync_playwright() as p:
     sched = pg5.text_content('#pack .sheet.schedule')
     ok('pack: quick-win fields printed on the schedule page', all(x in sched for x in ['Must-follow rules', 'Phone policy', 'Go-to adult nearby', 'nwin', 'School bell schedule']))
     note = pg5.locator('#pack .sheet.daynote')
-    ok('note: two QR codes (email + text)', note.locator('svg.qr').count() == 2)
+    ok('note: two QR codes (email + text)', note.locator('.qr-row svg.qr').count() == 2)
     hrefs = note.locator('figure').evaluate_all('els => els.map(e => e.getAttribute("data-href"))')
     ok('note: links go to the teacher\u2019s own address and number', hrefs[0].startswith('mailto:ms.rivera@lincoln.example.org?subject=') and hrefs[1].startswith('sms:5552014477?&body='), hrefs)
     from urllib.parse import unquote
@@ -256,7 +395,7 @@ with sync_playwright() as p:
     if cv2 is not None:
         for i, kind in enumerate(['email', 'text']):
             big_css = pg5.add_style_tag(content='.qr-fig svg{width:420px !important;height:420px !important}')
-            qp = tempfile.mktemp(suffix='.png'); note.locator('svg.qr').nth(i).screenshot(path=qp)
+            qp = tempfile.mktemp(suffix='.png'); note.locator('.qr-row svg.qr').nth(i).screenshot(path=qp)
             big_css.evaluate('e => e.remove()')
             img = cv2.imread(qp); img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(255, 255, 255))
             data = cv2.QRCodeDetector().detectAndDecode(img)[0] or cv2.QRCodeDetectorAruco().detectAndDecode(img)[0]

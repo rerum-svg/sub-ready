@@ -13,19 +13,58 @@
     persistent = false;
     var mem = {}; store = { getItem: function (k) { return k in mem ? mem[k] : null; }, setItem: function (k, v) { mem[k] = String(v); }, removeItem: function (k) { delete mem[k]; } };
   }
-  var unlocked = false;
-  try { unlocked = store.getItem('subready.unlocked') === '1'; } catch (e) {}
+  // ---------- access: free one-day tool, 14-day binder trial, then the Teacher plan ----------
+  // The binder always loads and renders. When the trial has ended it is locked for editing and printing only:
+  // nothing is deleted, and Export always works.
+  var P = window.SubReadyPlans;
+  var pstate = P.readState(store);
+  var acc = P.access(CFG, pstate);
+  if (acc.mode === 'trial' && !pstate.trialStart) { P.ensureTrialStart(store); pstate = P.readState(store); acc = P.access(CFG, pstate); }
+  var locked = !acc.enabled;
+  var LOCK_ALLOWED = ['exportBtn'];
 
-  // ---------- gate ----------
-  var acc = B.access(CFG, unlocked);
-  $('accessLabel').textContent = acc.label;
-  if (!CFG.EARLY_ACCESS) $('earlyNote').hidden = true;
-  if (!acc.enabled) {
-    $('app').hidden = true; $('gate').hidden = false;
-    if (acc.url) { $('gateBtn').href = acc.url; $('gateBtn').textContent = 'Get the Teacher plan'; $('gateBtn').removeAttribute('aria-disabled'); $('gateText').textContent = 'Unlock the class binder, emergency plan and print pack.'; }
-    window.__subReadyBinder = { access: acc };
-    return;
+  function fmtDate(ms) { try { return new Date(ms).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; } }
+  function showAccess() {
+    $('accessLabel').textContent = acc.label;
+    $('accessLabel').classList.toggle('soon', acc.mode === 'locked');
+    var gate = $('gate'), note = $('trialNote');
+    note.hidden = true; gate.hidden = true; gate.classList.remove('locked-gate');
+    if (acc.mode === 'trial') {
+      note.hidden = false;
+      note.textContent = 'Your ' + acc.trialDays + '-day free trial started in this browser and runs until ' + fmtDate(acc.endsAt) + '. After that, everything you saved stays here and you can always export it; editing and printing need the Teacher plan ($5/month). No card is needed for the trial.';
+      gate.hidden = false;
+      $('gateTitle').textContent = 'Keep the class binder after your trial';
+      $('gateText').textContent = 'Subscribe any time. You won\u2019t lose anything you set up during the trial.';
+    } else if (acc.mode === 'locked') {
+      gate.hidden = false; gate.classList.add('locked-gate');
+      $('gateTitle').textContent = 'Your free trial has ended';
+      $('gateText').textContent = 'Everything you saved is still here in this browser. Nothing has been deleted, and Export still works. Subscribe to edit and print again.';
+    }
   }
+  function applyLock() {
+    var app = $('app');
+    app.classList.toggle('locked', locked);
+    Array.prototype.forEach.call(app.querySelectorAll('section.card'), function (sec) { if (locked) sec.setAttribute('inert', ''); else sec.removeAttribute('inert'); });
+    ['importFile', 'clearBtn'].forEach(function (id) { var el = $(id); if (el) el.disabled = locked; });
+    var imp = $('importFile'); if (imp && imp.parentNode) imp.parentNode.classList.toggle('disabled', locked);
+    $('lockNote').hidden = !locked;
+    if (locked) { $('packWrap').hidden = true; document.body.classList.remove('has-pack'); }
+  }
+  // Belt and braces: while locked, block edits, drags and print actions inside the binder, but never Export.
+  ['click', 'input', 'change', 'dragstart', 'drop', 'keydown'].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      if (!locked) return;
+      var t = e.target; if (!t || !t.closest) return;
+      if (!t.closest('#app') && !t.closest('#packWrap')) return;
+      if (LOCK_ALLOWED.some(function (id) { return t.closest('#' + id); })) return;
+      if (type === 'keydown' && (e.key === 'Tab' || e.key === 'Shift')) return;
+      e.stopImmediatePropagation(); if (type !== 'keydown' || e.key === 'Enter' || e.key === ' ') e.preventDefault();
+    }, true);
+  });
+  window.SubReadyPay.render($('gatePlans'), {
+    onUnlock: function (s) { pstate = s; acc = P.access(CFG, s); locked = !acc.enabled; showAccess(); applyLock(); $('gate').hidden = false; $('gateTitle').textContent = 'Thank you'; $('gateText').textContent = 'The class binder is unlocked in this browser.'; }
+  });
+  showAccess();
 
   var binder = B.load(store) || B.emptyBinder();
   if (!B.load(store) && !binder.contacts.length) {
@@ -36,12 +75,14 @@
   function setStatus(t) { $('saveStatus').textContent = t; }
   var saveTimer = null;
   function saveSoon() {
+    if (locked) return;
     setStatus('Saving\u2026');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, 300);
   }
   function saveNow() {
     clearTimeout(saveTimer);
+    if (locked) return;
     try {
       binder = B.save(store, binder);
       var t = new Date();
@@ -414,6 +455,7 @@
   });
 
   renderAll();
-  if (B.load(store)) setStatus('Loaded from this browser');
-  window.__subReadyBinder = { get binder() { return binder; }, access: acc, saveNow: saveNow, persistent: persistent };
+  if (B.load(store)) setStatus(locked ? 'Loaded from this browser (read-only until you subscribe)' : 'Loaded from this browser');
+  applyLock();
+  window.__subReadyBinder = { get binder() { return binder; }, get access() { return acc; }, get locked() { return locked; }, saveNow: saveNow, persistent: persistent };
 })();

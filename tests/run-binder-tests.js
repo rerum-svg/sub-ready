@@ -15,6 +15,7 @@ function check(group, name, cond, detail) {
 function throws(fn, re) { try { fn(); return false; } catch (e) { return re ? re.test(e.message) : true; } }
 function memStore() { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; }, _m: m }; }
 const clone = (o) => JSON.parse(JSON.stringify(o));
+const noFoot = (h) => h.replace(/<p class="made-with">[\s\S]*?<\/p>/g, '');  // the "Made with Sub-Ready" print footer
 const outDir = path.join(__dirname, 'out'); fs.mkdirSync(outDir, { recursive: true });
 
 // ---------- shape & validation ----------
@@ -71,22 +72,65 @@ check(g, 'newer version rejected', throws(() => B.importJSON('{"app":"sub-ready"
 check(g, 'huge file rejected', throws(() => B.importJSON('{"classes":[],"x":"' + 'a'.repeat(2100000) + '"}'), /too large/));
 check(g, 'array JSON rejected', throws(() => B.importJSON('[1,2]')));
 
-// ---------- access flag ----------
-g = 'early-access flag';
+// ---------- plans: config, trial clock, unlock, restore ----------
+g = 'plans & trial';
+const P = require('../js/plan-core.js');
 const cfgSrc = fs.readFileSync(path.join(root, 'js/config.js'), 'utf8');
 const sandbox = { window: {} }; vm.runInNewContext(cfgSrc, sandbox);
 const CFG = sandbox.window.SUB_READY_CONFIG;
-check(g, 'shipped config: PRO_URL is empty', CFG.PRO_URL === '');
-check(g, 'shipped config: EARLY_ACCESS is on', CFG.EARLY_ACCESS === true);
-const a1 = B.access(CFG, false);
-check(g, 'early access -> enabled, labeled free, not paid', a1.enabled && a1.label === 'Free early access' && !a1.paid);
-const a2 = B.access({ PRO_URL: '', EARLY_ACCESS: false }, false);
-check(g, 'flag off, no PRO_URL -> locked, "Coming soon", no link', !a2.enabled && a2.label === 'Coming soon' && a2.url === '');
-const a3 = B.access({ PRO_URL: 'https://example.com/buy', EARLY_ACCESS: false }, false);
-check(g, 'flag off, PRO_URL set, not unlocked -> locked with checkout link', !a3.enabled && a3.url === 'https://example.com/buy' && /\$5\/month/.test(a3.label));
-const a4 = B.access({ PRO_URL: 'https://example.com/buy', EARLY_ACCESS: false }, true);
-check(g, 'flag off, PRO_URL set, unlocked -> enabled as Teacher plan', a4.enabled && a4.paid);
-check(g, 'unlock alone without PRO_URL does not enable', !B.access({ PRO_URL: '', EARLY_ACCESS: false }, true).enabled);
+check(g, 'shipped config: Teacher plan id set', CFG.TEACHER_PLAN_ID === 'P-4HY43543H4125745JNMEW6UY' && P.planId(CFG, 'teacher') === CFG.TEACHER_PLAN_ID);
+check(g, 'shipped config: Building plan id set', CFG.BUILDING_PLAN_ID === 'P-1TV20312FM9343509NMEXBEQ' && P.planId(CFG, 'building') === CFG.BUILDING_PLAN_ID);
+check(g, 'shipped config: one client id (the Sub-Ready app) for both plans', CFG.PAYPAL_CLIENT_ID === 'AY5HQPWM12-j5wkw9D6iiTnOuNShiZi9H8WAhLbmHXaZ8EnEQkS5Oy7bW-cGRyJy6XBeayZ8jClFmNyI' && !/BAAMKsx/.test(cfgSrc));
+check(g, 'shipped config: trial switch on, 14 days', CFG.TRIAL_ON === true && P.trialDays(CFG) === 14);
+check(g, 'no old EARLY_ACCESS / PRO_URL switches left', !/EARLY_ACCESS|PRO_URL/.test(cfgSrc));
+check(g, 'SDK url: client id, vault=true, intent=subscription', P.sdkUrl(CFG) === 'https://www.paypal.com/sdk/js?client-id=' + CFG.PAYPAL_CLIENT_ID + '&vault=true&intent=subscription');
+const off = P.offers(CFG);
+check(g, 'both plans for sale with the shipped config', off.length === 2 && off.every(o => o.forSale) && off[0].price === '$5' && off[1].price === '$49');
+const offNoB = P.offers(Object.assign({}, CFG, { BUILDING_PLAN_ID: '' }));
+check(g, 'Building plan not for sale while its id is empty', offNoB[0].forSale && !offNoB[1].forSale && offNoB[1].planId === '');
+check(g, 'malformed plan id is treated as empty', P.planId({ TEACHER_PLAN_ID: 'javascript:alert(1)' }, 'teacher') === '');
+const D = P.DAY, T0 = Date.UTC(2026, 10, 27, 15, 0, 0);
+const at = (days, st) => P.access(CFG, Object.assign({ trialStart: T0, unlocked: false }, st || {}), T0 + days * D);
+const d0 = at(0), d13 = at(13), d13b = at(13.99), d14 = at(14), d15 = at(15);
+check(g, 'trial day 0: enabled, 14 days left', d0.enabled && d0.mode === 'trial' && d0.daysLeft === 14 && /14 days left/.test(d0.label));
+check(g, 'trial day 13: enabled, 1 day left', d13.enabled && d13.mode === 'trial' && d13.daysLeft === 1 && /1 day left/.test(d13.label));
+check(g, 'trial day 13, 23:45 later: still enabled', d13b.enabled && d13b.daysLeft === 1);
+check(g, 'trial day 14: locked', !d14.enabled && d14.mode === 'locked');
+check(g, 'trial day 15: locked, "Trial ended"', !d15.enabled && d15.mode === 'locked' && d15.label === 'Trial ended');
+check(g, 'trial ends exactly 14 days after start', d0.endsAt === T0 + 14 * D);
+check(g, 'clock set back before the start counts as day 0', at(-3).enabled && at(-3).daysLeft === 14);
+check(g, 'no trial start yet -> full trial', P.access(CFG, { trialStart: null }, T0).daysLeft === 14);
+check(g, 'unlocked after the trial -> enabled as Teacher plan', at(40, { unlocked: true }).enabled && at(40, { unlocked: true }).mode === 'paid' && at(40, { unlocked: true }).label === 'Teacher plan');
+check(g, 'Building subscription unlocks the binder too', at(40, { unlocked: true, plan: 'building' }).enabled && at(40, { unlocked: true, plan: 'building' }).label === 'Building plan');
+check(g, 'switch off -> binder free for everyone, even after day 15', P.access(Object.assign({}, CFG, { TRIAL_ON: false }), { trialStart: T0 }, T0 + 30 * D).mode === 'free');
+check(g, 'no Teacher plan id -> nothing to buy, binder stays free', P.access(Object.assign({}, CFG, { TEACHER_PLAN_ID: '' }), { trialStart: T0 }, T0 + 30 * D).enabled);
+const ps = memStore();
+check(g, 'trial starts on first use and is stored locally', P.ensureTrialStart(ps, T0) === T0 && ps._m[P.KEYS.trialStart] === String(T0));
+check(g, 'a later visit never moves the start date', P.ensureTrialStart(ps, T0 + 5 * D) === T0 && P.readState(ps).trialStart === T0);
+check(g, 'subscription id accepted: I- prefix, trimmed, upper-cased', P.cleanSubscriptionId('  i-bw452gllep1g ') === 'I-BW452GLLEP1G');
+check(g, 'bad subscription ids rejected', ['', 'P-4HY43543H4125745JNMEW6UY', 'I-', 'hello', 'I-<script>', null].every(x => P.cleanSubscriptionId(x) === ''));
+const us = memStore(); B.save(us, FIX); P.ensureTrialStart(us, T0);
+const before = us._m[B.STORAGE_KEY];
+const ur = P.unlock(us, 'I-BW452GLLEP1G', 'teacher', T0 + 20 * D);
+check(g, 'unlock (after PayPal approval) saves the flag and the id', ur.ok && us._m[P.KEYS.unlocked] === '1' && us._m[P.KEYS.subId] === 'I-BW452GLLEP1G' && P.readState(us).unlocked);
+check(g, 'unlock leaves the saved binder untouched', us._m[B.STORAGE_KEY] === before);
+check(g, 'after unlock, access is enabled on day 20', P.access(CFG, P.readState(us), T0 + 20 * D).enabled);
+const rs = memStore(); P.ensureTrialStart(rs, T0);
+check(g, 'restore path: locked on day 15 before restoring', !P.access(CFG, P.readState(rs), T0 + 15 * D).enabled);
+check(g, 'restore path: a bad id is refused with a clear message and stays locked', !P.unlock(rs, 'abc').ok && /starts with I-/.test(P.unlock(rs, 'abc').error) && !P.readState(rs).unlocked);
+check(g, 'restore path: a pasted id unlocks this browser', P.unlock(rs, 'I-RESTORE12345').ok && P.access(CFG, P.readState(rs), T0 + 15 * D).enabled);
+const ls = memStore(); B.save(ls, FIX); P.ensureTrialStart(ls, T0);
+const lockedAcc = P.access(CFG, P.readState(ls), T0 + 15 * D);
+check(g, 'no data loss when locked: binder still loads in full', !lockedAcc.enabled && JSON.stringify(B.load(ls)) === JSON.stringify(B.normalizeBinder(FIX)));
+check(g, 'no data loss when locked: export still produces the whole binder', JSON.stringify(B.importJSON(B.exportJSON(B.load(ls)))) === JSON.stringify(B.normalizeBinder(FIX)));
+const planSrc = fs.readFileSync(path.join(root, 'js/plan-core.js'), 'utf8');
+check(g, 'plan code never removes data', !/removeItem|\.clear\(/.test(planSrc));
+const payJs = fs.readFileSync(path.join(root, 'js/paypal.js'), 'utf8');
+check(g, 'PayPal SDK is only added inside the Subscribe click handler', /addEventListener\('click'[\s\S]*loadSdk\(\)/.test(payJs) && (payJs.match(/loadSdk\(\)\.then/g) || []).length === 1 && !/<script[^>]+paypal\.com/i.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8') + fs.readFileSync(path.join(root, 'binder.html'), 'utf8')));
+check(g, 'only the plan id goes to PayPal (no binder, names or notes)', /subscription\.create\(\{ plan_id: o\.planId \}\)/.test(payJs) && !/students|SubReadyBinder|subready\.binder|STORAGE_KEY|getItem\(/.test(payJs));
+check(g, 'no alert() after approval; thank-you panel shows the id', !/alert\(/.test(payJs) && /Thank you!/.test(payJs) && /data-sub-id/.test(payJs));
+check(g, 'Building thank-you says to share the school file with staff', /share the school file with your staff/i.test(payJs));
+check(g, 'restore copy is honest about verification', /doesn&rsquo;t check the ID with PayPal/.test(payJs) && !/verified|verify your/i.test(payJs));
 
 // ---------- times ----------
 g = 'times';
@@ -221,11 +265,11 @@ const ns = noNote.split('sheet daynote')[1].split('</section>')[0];
 check(g, 'printed form is in every pack, before the emergency sheet', /sheet daynote[\s\S]*sheet emergency/.test(noNote) && /End-of-day note for Ms\. Rivera/.test(ns));
 check(g, 'form lists each period in the pack with a rating', ['Period 1 - Math 6', 'Period 3 - Math 7', 'Period 5 - Advisory'].every(x => ns.indexOf(x) > -1) && /Great[\s\S]*OK[\s\S]*Rough/.test(ns));
 check(g, 'form has what got done / didn\u2019t / anything to know', /What got done/.test(ns) && /What didn\u2019t get done/.test(ns) && /Anything I should know/.test(ns));
-check(g, 'no contact -> no QR code', !/<svg/.test(ns));
+check(g, 'no contact -> no QR code (other than the footer)', !/<svg/.test(noFoot(ns)));
 const NT = Object.assign(clone(FIX), { noteEmail: 'ms.rivera@lincoln.example.org', notePhone: '(555) 201-4477' });
 const ntm = B.buildPack(NT, { mode: 'day', date: 'Tuesday, December 2', periods: ['p3'] });
 const nth = B.renderPackHTML(ntm);
-const nsh = nth.split('sheet daynote')[1].split('</section>')[0];
+const nsh = noFoot(nth.split('sheet daynote')[1].split('</section>')[0]);
 check(g, 'mailto: to the teacher\u2019s own address', ntm.note.mailto.indexOf('mailto:ms.rivera@lincoln.example.org?subject=') === 0);
 check(g, 'sms: to the teacher\u2019s own number (digits only)', ntm.note.sms.indexOf('sms:5552014477?&body=') === 0);
 const body = decodeURIComponent(ntm.note.mailto.split('&body=')[1]);
@@ -241,7 +285,7 @@ check(g, 'QR codes are inline SVG (no image request)', !/<img|src=/.test(nsh));
 check(g, 'phone: formatting stripped, +country kept', B.cleanPhone('+1 (555) 201-4477') === '+15552014477' && B.cleanPhone('555.201.4477') === '5552014477');
 check(g, 'phone rejected: letters / too short / injection', B.cleanPhone('call me') === '' && B.cleanPhone('123') === '' && B.cleanPhone('5552014477?body=hi') === '');
 const badN = Object.assign(clone(FIX), { noteEmail: 'oops', notePhone: 'abc' });
-check(g, 'bad contact -> no QR, flagged in the gap check', !/<svg/.test(B.renderPackHTML(B.buildPack(badN))) && B.readiness(badN).filter(i => /noteEmail|notePhone/.test(i.field)).length === 2);
+check(g, 'bad contact -> no QR, flagged in the gap check', !/<svg/.test(noFoot(B.renderPackHTML(B.buildPack(badN)))) && B.readiness(badN).filter(i => /noteEmail|notePhone/.test(i.field)).length === 2);
 check(g, 'emergency mode note has a write-in date', /<th>Date<\/th><td><\/td>/.test(ns));
 fs.writeFileSync(path.join(outDir, 'pack-note.html'), '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><body class="binder-page"><main class="wrap">' + nth + '</main>');
 
@@ -292,7 +336,7 @@ const ST2 = clone(ST); ST2.classes[0].storyPrompt = 'The <b>lights</b> went out.
 check(g, 'teacher\u2019s own starter printed (escaped)', /The &lt;b&gt;lights&lt;\/b&gt; went out\./.test(B.renderPackHTML(B.buildPack(ST2))));
 const storyPart = stHtml.split('<section class="sheet story">')[1].split('<section class="sheet daynote')[0];
 check(g, 'paper only: no devices, accounts, links or QR', /no devices or accounts/.test(stHtml) && !/<a |<svg|http/.test(storyPart));
-check(g, 'brand-free: no other brand on the story sheets', !/scripto|rerum/i.test(stHtml));
+check(g, 'brand-free: no other brand on the story sheets', !/scripto|rerum/i.test(noFoot(stHtml)));
 check(g, 'reminds students not to use classmates\u2019 real names', /classmates\u2019 real names/.test(stHtml));
 check(g, 'story page has 8 turn boxes', (stHtml.match(/class="turn"/g) || []).length === 8);
 check(g, 'off by default: base pack unchanged', !/sheet story/.test(B.renderPackHTML(B.buildPack(FIX))));
@@ -302,19 +346,46 @@ fs.writeFileSync(path.join(outDir, 'pack-all.html'), '<!doctype html><meta chars
 
 // ---------- pages: honesty & privacy ----------
 g = 'pages';
-const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'js/vendor/qrcode.js', 'styles.css', 'README.md'];
+const files = ['index.html', 'binder.html', 'compare.html', 'js/app.js', 'js/core.js', 'js/binder.js', 'js/binder-core.js', 'js/config.js', 'js/plan-core.js', 'js/paypal.js', 'js/vendor/qrcode.js', 'styles.css', 'README.md'];
 const all = files.map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
-check(g, 'no Rerum or Rerum product names in site files', !/rerum|\bscripto|phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu/i.test(all));
+check(g, 'no Rerum or Rerum product names in site files (the GitHub Pages host name aside)', !/rerum|\bscripto|phenomenon|preacheritage|\bbless\b|nail salon|fed tzuu/i.test(all.replace(/rerum-svg\.github\.io\/sub-ready/g, '')));
 check(g, 'no analytics or tracking scripts', !/google-analytics|gtag\(|googletagmanager|plausible|mixpanel|segment\.com|hotjar|clarity\.ms/i.test(all));
 const binderJs = fs.readFileSync(path.join(root, 'js/binder.js'), 'utf8') + fs.readFileSync(path.join(root, 'js/binder-core.js'), 'utf8');
 check(g, 'binder code makes no network calls', !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.sendBeacon/.test(binderJs));
+check(g, 'plans code makes no fetch/XHR/beacon calls', !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(planSrc + payJs));
 const cmp = fs.readFileSync(path.join(root, 'compare.html'), 'utf8');
 const rows = cmp.split('<tbody>')[1].split('<tr><th>').slice(1);
 check(g, 'compare page: 6 rows (Sub-Ready + 5 tools)', rows.length === 6, String(rows.length));
 check(g, 'compare page: every other tool has a source link and as-of date', rows.slice(1).every(r => /href="https:\/\//.test(r) && /Nov 26, 2026/.test(r)));
 check(g, 'compare page: no repeated customer counts or testimonials', !/214|testimonial|trusted by|\d+ schools use/i.test(cmp));
 const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-check(g, 'landing: plans labeled coming soon, no fake urgency', /coming soon/i.test(idx) && !/limited time|only \d+ left|hurry|act now/i.test(idx + cmp + fs.readFileSync(path.join(root, 'binder.html'), 'utf8')));
+check(g, 'landing: honest pricing ($5 teacher, $49 school, cancel anytime in PayPal), no fake urgency', /\$5\/month per teacher/.test(idx) && /\$49\/month per school/.test(idx) && /Cancel anytime in PayPal/.test(idx) && !/limited time|only \d+ left|hurry|act now|spots left|testimonial|trusted by|\d+\s*(teachers|schools) (use|love)/i.test(idx + cmp + fs.readFileSync(path.join(root, 'binder.html'), 'utf8') + payJs));
+check(g, 'landing: still says it is actively being built', /actively being built/.test(idx));
+check(g, 'privacy copy: checkout on PayPal, no class or student data sent, still "no analytics"', /checkout runs on PayPal/i.test(idx) && /sends PayPal no class or student data/.test(idx) && /no analytics/.test(idx));
+check(g, 'compare page: pricing matches the site', /14-day free trial/.test(cmp) && /\$5\/month per teacher/.test(cmp) && !/not on sale yet/.test(cmp));
+const hero = idx.split('<section class="hero')[1].split('</section>')[0];
+check(g, 'hero: new headline and subhead', /Your sub can&rsquo;t ask what &ldquo;the blue bin&rdquo; means\./.test(hero) && /Sub-Ready finds those gaps before you&rsquo;re out\. Answer 5 to 8 questions and print a plan with times, routines, helpers and emergency info\. Nothing is uploaded\./.test(hero));
+check(g, 'hero: primary "Find the gaps in my plan" -> tool, secondary "Set up my class binder" -> binder', /class="btn" id="heroFind" href="#tool">Find the gaps in my plan</.test(hero) && /class="btn ghost" id="heroBinder" href="binder.html">Set up my class binder</.test(hero));
+check(g, 'hero: microcopy', /Free\. No account\. Nothing uploaded\./.test(hero));
+const coreSrc = fs.readFileSync(path.join(root, 'js/core.js'), 'utf8');
+check(g, 'hero claim "5 to 8 questions" matches the tool (enforced 5-8)', /enforce 5-8/.test(coreSrc));
+// Print footer loop
+const fEm = B.renderPackHTML(B.buildPack(FIX, { mode: 'emergency' }));
+const fDay = B.renderPackHTML(B.buildPack(FIX, { mode: 'day', periods: ['p3'] }));
+const FOOT = 'Made with Sub-Ready (free) \u00b7 https://rerum-svg.github.io/sub-ready/?src=pack';
+const lastSheet = (h) => h.split('<section class="sheet').pop();
+check(g, 'footer: pack URL is the site with ?src=pack', B.PACK_URL === 'https://rerum-svg.github.io/sub-ready/?src=pack');
+check(g, 'footer: emergency pack ends with the line and a QR', lastSheet(fEm).indexOf(FOOT) > -1 && /class="made-with"><svg class="qr"/.test(lastSheet(fEm)));
+check(g, 'footer: day pack ends with it too', lastSheet(fDay).indexOf(FOOT) > -1);
+const noteSec = fDay.split('<section class="sheet daynote"')[1].split('</section>')[0];
+check(g, 'footer: end-of-day note has it', noteSec.indexOf(FOOT) > -1 && /made-with/.test(noteSec));
+check(g, 'footer: exactly twice per pack (note + last sheet)', fEm.split('class="made-with"').length - 1 === 2);
+const ftHtml = B.madeWithHTML();
+check(g, 'footer: no class or student data in the footer', !/Rivera|Jaylen|Room|214/.test(ftHtml));
+const QG = require('../js/vendor/qrcode.js'); const qq = QG(0, 'M'); qq.addData(B.PACK_URL); qq.make();
+check(g, 'footer QR encodes the pack URL and stays small (<= version 4)', qq.getModuleCount() <= 33 && ftHtml.indexOf('aria-label="QR code: Sub-Ready website"') > -1);
+check(g, '?src=pack is never read or counted by site code (no analytics)', !/location\.search|URLSearchParams|src=pack/.test(fs.readFileSync(path.join(root, 'js/app.js'), 'utf8') + fs.readFileSync(path.join(root, 'js/binder.js'), 'utf8') + payJs + planSrc));
+check(g, 'footer prints small and in black', /@media print[\s\S]*\.made-with\{color:#000 !important;font-size:8pt/.test(fs.readFileSync(path.join(root, 'styles.css'), 'utf8')));
 check(g, 'landing: no old "$9 one-time" offer', !/\$9 one-time/.test(idx));
 
 // ---------- write results ----------
