@@ -1,7 +1,9 @@
 PASS binder page loads (HTTP 200)
-PASS labeled "Free early access"
+PASS day 0: labeled "Free trial · 14 days left" -- Free trial · 14 days left
+PASS day 0: trial start saved in this browser
 PASS says it is saved only in this browser
-PASS plans described as not on sale yet
+PASS trial note: 14 days, nothing deleted, export always works, $5/month -- Your 14-day free trial started in this browser and runs until December 11, 2026. After that, everything you saved stays here and you can always export it; editing and printing need the Teacher plan ($
+PASS day 0: subscribe offered but PayPal not loaded
 PASS default contact roles offered
 PASS after reload: status says loaded -- Loaded from this browser
 PASS after reload: shared fields kept
@@ -24,6 +26,9 @@ PASS print PDF: page 1 is the cover
 PASS print PDF: page 2 is the schedule
 PASS print PDF: page 6 is the end-of-day note
 PASS print PDF: last page is the emergency sheet
+PASS print PDF: pack ends with "Made with Sub-Ready (free)" + pack URL
+PASS print PDF: end-of-day note has the footer too
+PASS print footer QR scans to https://rerum-svg.github.io/sub-ready/?src=pack -- https://rerum-svg.github.io/sub-ready/?src=pack
 PASS print PDF: no editor text leaked
 PASS day plan: unticked period left out (6 sheets) -- 6
 PASS day plan: today’s lesson used
@@ -50,10 +55,42 @@ Will R.
 Grace S.
 PASS hand-off: no listed student name reaches the AI prompt
 PASS hand-off: used once (cleared after reload)
-PASS landing: binder labeled free early access
-PASS landing: plans coming soon, button has no link
-PASS flag off: binder locked behind the plan
-PASS flag off, no PRO_URL: "Coming soon", no link
+PASS landing: binder labeled 14-day free trial
+PASS landing: honest pricing, cancel anytime in PayPal
+PASS landing: privacy says checkout runs on PayPal with no class or student data
+PASS day 13: "1 day left", binder editable -- Free trial · 1 day left
+PASS day 13: edits still save
+PASS day 15: labeled "Trial ended", gate says so
+PASS day 15: lock note says nothing was deleted and export works
+PASS day 15: saved data still shown in full
+PASS day 15: editing locked (sections inert, import and delete disabled)
+PASS day 15: scripted edits are not saved and no print pack opens
+PASS day 15: Export still works and holds the whole binder
+PASS day 15: no data lost (storage unchanged)
+PASS day 15: PayPal not loaded before a Subscribe click
+PASS subscribe click: SDK requested with the Sub-Ready client id, vault and subscription intent -- ['https://www.paypal.com/sdk/js?client-id=AY5HQPWM12-j5wkw9D6iiTnOuNShiZi9H8WAhLbmHXaZ8EnEQkS5Oy7bW-cGRyJy6XBeayZ8jClFmNyI&vault=true&intent=subscription']
+PASS approval: only the Teacher plan id is sent to PayPal -- {'plan_id': 'P-4HY43543H4125745JNMEW6UY'}
+PASS approval: thank-you panel shows the subscription id and how to cancel -- Thank you! Your Teacher plan is active in this browser.Your PayPal subscription ID is I-TESTSUB12345 CopyKeep this ID. Y
+PASS approval: unlocked flag and id saved locally
+PASS approval: binder unlocked in place
+PASS approval: nothing lost
+PASS approval: still unlocked after reload, edits save again
+PASS building: only the Building plan id is sent to PayPal
+PASS building: thank-you says to share the school file with staff
+PASS building: binder unlocked, labeled Building plan
+PASS restore: copy is honest (no server check)
+PASS restore: bad id refused, still locked
+PASS restore: pasted id unlocks this browser
+PASS restore: no PayPal request at all
+PASS restore: data intact
+PASS empty Building id: no Building subscribe button, shows "Coming soon"
+PASS ?src=pack: landing loads normally (HTTP 200)
+PASS ?src=pack: no outside request before Subscribe
+PASS ?src=pack: binder loads normally
+PASS real PayPal: Teacher button renders with the Sub-Ready client id
+PASS real PayPal: Building button renders too (same SDK, loaded once)
+PASS real PayPal: outside requests only to PayPal after the click -- www.paypal.com www.paypalobjects.com
+PASS real PayPal: no error message shown
 PASS design: cards are frosted glass (backdrop-filter blur) -- blur(22px) saturate(1.8)
 PASS design: system font stack
 PASS app says it is actively being built
